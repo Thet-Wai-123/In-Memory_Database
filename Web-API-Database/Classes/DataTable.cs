@@ -1,21 +1,22 @@
 ﻿using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Identity;
+using Web_API_Database.Classes;
 
 namespace In_Memory_Database.Classes
 {
     public class DataTable
     {
         public string TableName { get; set; }
-        public List<Type> ColumnsType { get; set; } = [];
-        private List<string> ColumnsName { get; set; } = [];
-        private readonly Dictionary<Guid, List<dynamic>> rows = [];
+        public List<Type> ColumnTypes { get; set; } = [];
+        public List<string> ColumnNames { get; set; } = [];
+        public Dictionary<Guid, List<dynamic>> Rows { get; } = [];
         public string Size
         {
-            get { return rows.Count + "x" + ColumnsType.Count; }
+            get { return Rows.Count + "x" + ColumnTypes.Count; }
         }
         public int Width
         {
-            get { return ColumnsType.Count; }
+            get { return ColumnTypes.Count; }
         }
 
         public DataTable(string tableName)
@@ -25,13 +26,13 @@ namespace In_Memory_Database.Classes
 
         public void AddColumn<T>(string name)
         {
-            ColumnsType.Add(typeof(T));
-            ColumnsName.Add(name);
+            ColumnTypes.Add(typeof(T));
+            ColumnNames.Add(name);
         }
 
         public void RemoveColumn(string name)
         {
-            if (ColumnsName.Remove(name) == false)
+            if (ColumnNames.Remove(name) == false)
             {
                 throw new ArgumentException("Column doesn't exist");
             }
@@ -39,40 +40,60 @@ namespace In_Memory_Database.Classes
 
         public void AddRow(List<dynamic> values)
         {
-            if (values.Count != ColumnsType.Count)
+            if (values.Count != ColumnTypes.Count)
             {
                 throw new ArgumentException("Input doesn't match the table column's length");
             }
             //use a loop here to check beforehand if all the types match first
-            for (int i = 0; i < ColumnsType.Count; i++)
+            for (int i = 0; i < ColumnTypes.Count; i++)
             {
-                if (values[i].GetType() != ColumnsType[i])
+                if (values[i].GetType() != ColumnTypes[i])
                 {
                     throw new ArgumentException("Input doesn't match the table column's type");
                 }
             }
-
             //add the row to the table
-            rows[Guid.NewGuid()] = values;
+            Rows[Guid.NewGuid()] = values;
         }
 
-        public void RemoveRow() { }
+        public void RemoveRow(SearchConditions conditions)
+        {
+            List<Guid> toBeRemovedRows = SearchManager.SearchTableForIdUsingConditions(
+                this,
+                conditions
+            );
 
-        //public void getTableSummary() { }
+            if (toBeRemovedRows.Count == 0)
+            {
+                throw new ArgumentException("Couldn't find any row with that condition");
+            }
+            foreach (var row in toBeRemovedRows)
+            {
+                Rows.Remove(row);
+            }
+        }
+
+        public List<dynamic> Find(SearchConditions conditions)
+        {
+            List<Guid> rowsIds = SearchManager.SearchTableForIdUsingConditions(this, conditions);
+            List<dynamic> foundRows = new();
+            foreach (Guid id in rowsIds)
+            {
+                foundRows.Add(Rows[id]);
+            }
+            return foundRows;
+        }
+
+        public void SaveToDisk() => FileManager.SaveToDisk(this, "./DataTable/rows.txt");
+
+        public void ReadFromDisk() { }
 
         public void StartTransaction() { }
 
         public void CommitTransaction() { }
 
-        public void SaveToDisk() => FileManager.SaveToDisk(rows, "./DataTable/rows.txt");
-
-        public void ReadFromDisk() { }
-
         public void CreateIndex() { }
 
         public void RemoveIndex() { }
-
-        //Gonna need a lot of parameters here to query based on column names, have equality checks
-        public void query() { }
     }
 }

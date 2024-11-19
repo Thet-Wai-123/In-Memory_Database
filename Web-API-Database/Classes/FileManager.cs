@@ -1,7 +1,10 @@
-﻿public class FileManager
+﻿using Web_API_Database.Classes;
+
+public class FileManager
 {
-    public static void SaveToDisk(Dictionary<Guid, List<dynamic>> rows, string path)
+    public static void SaveToDisk(TableSnapShot table, string path)
     {
+        Dictionary<Guid, List<dynamic>> rows = table.Rows;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         using (StreamWriter sw = File.CreateText(path))
