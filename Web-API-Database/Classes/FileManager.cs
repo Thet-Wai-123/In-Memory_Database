@@ -1,8 +1,9 @@
-﻿using Web_API_Database.Classes;
+﻿using In_Memory_Database.Classes;
+using Web_API_Database.Classes;
 
 public class FileManager
 {
-    public static void SaveToDisk(TableSnapShot table, string path)
+    public static void SaveToDisk(DataTable table, string path)
     {
         Dictionary<Guid, List<dynamic>> rows = table.Rows;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
