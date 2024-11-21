@@ -9,7 +9,8 @@ namespace In_Memory_Database.Classes
         public string TableName { get; set; }
         public List<Type> ColumnTypes { get; set; } = [];
         public List<string> ColumnNames { get; set; } = [];
-        public Dictionary<Guid, List<dynamic>> Rows { get; } = [];
+
+        public Dictionary<Guid, DataRow> Rows { get; } = [];
         public string Size
         {
             get { return Rows.Count + "x" + ColumnTypes.Count; }
@@ -38,7 +39,7 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public void AddRow(List<dynamic> values)
+        public void AddRow(DataRow values)
         {
             if (values.Count != ColumnTypes.Count)
             {
@@ -73,10 +74,10 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public List<dynamic> Find(SearchConditions conditions)
+        public List<DataRow> Find(SearchConditions conditions)
         {
             List<Guid> rowsIds = SearchManager.SearchTableForIdUsingConditions(this, conditions);
-            List<dynamic> foundRows = new();
+            List<DataRow> foundRows = new();
             foreach (Guid id in rowsIds)
             {
                 foundRows.Add(Rows[id]);

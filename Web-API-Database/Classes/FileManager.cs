@@ -5,7 +5,7 @@ public class FileManager
 {
     public static void SaveToDisk(DataTable table, string path)
     {
-        Dictionary<Guid, List<dynamic>> rows = table.Rows;
+        Dictionary<Guid, DataRow> rows = table.Rows;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
         using (StreamWriter sw = File.CreateText(path))

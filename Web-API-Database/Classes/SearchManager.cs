@@ -12,7 +12,7 @@ namespace Web_API_Database.Classes
         )
         {
             List<string> columnNames = table.ColumnNames;
-            Dictionary<Guid, List<dynamic>> rows = table.Rows;
+            Dictionary<Guid, DataRow> rows = table.Rows;
 
             int targetColumnIndex = -1;
             for (int i = 0; i < columnNames.Count; i++)
