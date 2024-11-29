@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using In_Memory_Database.Classes;
 
 namespace Web_API_Database.Classes
@@ -11,7 +12,7 @@ namespace Web_API_Database.Classes
             SearchConditions conditions
         )
         {
-            List<string> columnNames = table.ColumnNames;
+            ReadOnlyCollection<string> columnNames = table.ColumnNames;
             Dictionary<Guid, DataRow> rows = table.Rows;
 
             int targetColumnIndex = -1;

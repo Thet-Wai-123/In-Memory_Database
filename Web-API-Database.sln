@@ -5,7 +5,7 @@ VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "In-memory Database", "Web-API-Database\In-memory Database.csproj", "{CE44BC5B-C5AB-4DCD-82FF-5C3828205299}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "In-memory Database_Testing", "In-memory Database_Testing\In-memory Database_Testing.csproj", "{4EECCCAE-04D2-4E2A-89B2-F621F4EF7A09}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "In-Memory DatabaseTesting", "In-memory DatabaseTesting\In-Memory DatabaseTesting.csproj", "{D434E8B5-599A-4C92-ABE3-3998AD0A9C0E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{CE44BC5B-C5AB-4DCD-82FF-5C3828205299}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE44BC5B-C5AB-4DCD-82FF-5C3828205299}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE44BC5B-C5AB-4DCD-82FF-5C3828205299}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4EECCCAE-04D2-4E2A-89B2-F621F4EF7A09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4EECCCAE-04D2-4E2A-89B2-F621F4EF7A09}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4EECCCAE-04D2-4E2A-89B2-F621F4EF7A09}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4EECCCAE-04D2-4E2A-89B2-F621F4EF7A09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D434E8B5-599A-4C92-ABE3-3998AD0A9C0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D434E8B5-599A-4C92-ABE3-3998AD0A9C0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D434E8B5-599A-4C92-ABE3-3998AD0A9C0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D434E8B5-599A-4C92-ABE3-3998AD0A9C0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

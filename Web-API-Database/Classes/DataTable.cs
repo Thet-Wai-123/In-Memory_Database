@@ -1,39 +1,53 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Collections.ObjectModel;
+using System.Reflection;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
+using Newtonsoft.Json.Serialization;
 using Web_API_Database.Classes;
 
 namespace In_Memory_Database.Classes
 {
-    public class DataTable
+    public class DataTable : DefaultContractResolver
     {
-        public string TableName { get; set; }
-        public List<Type> ColumnTypes { get; set; } = [];
-        public List<string> ColumnNames { get; set; } = [];
+        public string Name { get; set; }
+        private List<Type> columnTypes = [];
+        public ReadOnlyCollection<Type> ColumnTypes
+        {
+            get { return columnTypes.AsReadOnly(); }
+            init { columnTypes = value.ToList(); }
+        }
+        private List<string> columnNames = [];
+        public ReadOnlyCollection<string> ColumnNames
+        {
+            get { return columnNames.AsReadOnly(); }
+            init { columnNames = value.ToList(); }
+        }
 
         public Dictionary<Guid, DataRow> Rows { get; } = [];
         public string Size
         {
-            get { return Rows.Count + "x" + ColumnTypes.Count; }
+            get { return Rows.Count + "x" + columnTypes.Count; }
         }
         public int Width
         {
-            get { return ColumnTypes.Count; }
+            get { return columnTypes.Count; }
         }
 
         public DataTable(string tableName)
         {
-            TableName = tableName;
+            Name = tableName;
         }
 
         public void AddColumn<T>(string name)
         {
-            ColumnTypes.Add(typeof(T));
-            ColumnNames.Add(name);
+            columnTypes.Add(typeof(T));
+            columnNames.Add(name);
         }
 
         public void RemoveColumn(string name)
         {
-            if (ColumnNames.Remove(name) == false)
+            if (columnNames.Remove(name) == false)
             {
                 throw new ArgumentException("Column doesn't exist");
             }
@@ -41,14 +55,14 @@ namespace In_Memory_Database.Classes
 
         public void AddRow(DataRow values)
         {
-            if (values.Count != ColumnTypes.Count)
+            if (values.Count != columnTypes.Count)
             {
                 throw new ArgumentException("Input doesn't match the table column's length");
             }
             //use a loop here to check beforehand if all the types match first
-            for (int i = 0; i < ColumnTypes.Count; i++)
+            for (int i = 0; i < columnTypes.Count; i++)
             {
-                if (values[i].GetType() != ColumnTypes[i])
+                if (values[i].GetType() != columnTypes[i])
                 {
                     throw new ArgumentException("Input doesn't match the table column's type");
                 }
@@ -96,5 +110,18 @@ namespace In_Memory_Database.Classes
         public void CreateIndex() { }
 
         public void RemoveIndex() { }
+
+        protected override List<MemberInfo> GetSerializableMembers(Type objectType)
+        {
+            var result = base.GetSerializableMembers(objectType);
+            if (objectType == typeof(DataTable))
+            {
+                var memberInfo = objectType
+                    .GetMember("_myField", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Single();
+                result.Add(memberInfo);
+            }
+            return result;
+        }
     }
 }
