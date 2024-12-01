@@ -1,26 +1,31 @@
 ﻿using In_Memory_Database.Classes;
-using Web_API_Database.Classes;
+using Newtonsoft.Json;
 
 public class FileManager
 {
-    public static void SaveToDisk(DataTable table, string path)
+    public static void SaveToDisk(DataTable table, string dir)
     {
-        Dictionary<Guid, DataRow> rows = table.Rows;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        string jsonString = JsonConvert.SerializeObject(table);
 
-        using (StreamWriter sw = File.CreateText(path))
-        {
-            foreach (var row in rows)
-            {
-                string line = row.Key + "|";
-                foreach (var value in row.Value)
-                {
-                    line += value + "|";
-                }
-                sw.WriteLine(line);
-            }
-        }
+        Directory.CreateDirectory(Path.GetDirectoryName(dir));
+        string path = $"{dir}{table.Name}.json";
+
+        File.WriteAllText(path, jsonString);
     }
 
-    public void ReadFromDisk(string path) { }
+    public static List<DataTable> ReadFromDisk(string dir)
+    {
+        string[] tablesToBeGenerated = Directory.GetFiles(dir);
+        List<DataTable> tablesToReturn = [];
+
+        foreach (string tablePath in tablesToBeGenerated)
+        {
+            using (StreamReader sr = File.OpenText(tablePath))
+            {
+                string infoJson = sr.ReadToEnd();
+                tablesToReturn.Add(JsonConvert.DeserializeObject<DataTable>(infoJson));
+            }
+        }
+        return tablesToReturn;
+    }
 }

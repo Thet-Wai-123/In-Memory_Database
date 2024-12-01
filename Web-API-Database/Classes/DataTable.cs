@@ -1,8 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Identity;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Web_API_Database.Classes;
 
@@ -15,19 +13,23 @@ namespace In_Memory_Database.Classes
         public ReadOnlyCollection<Type> ColumnTypes
         {
             get { return columnTypes.AsReadOnly(); }
-            init { columnTypes = value.ToList(); }
         }
         private List<string> columnNames = [];
         public ReadOnlyCollection<string> ColumnNames
         {
             get { return columnNames.AsReadOnly(); }
-            init { columnNames = value.ToList(); }
         }
 
-        public Dictionary<Guid, DataRow> Rows { get; } = [];
+        private Dictionary<Guid, DataRow> rows = [];
+
+        public ReadOnlyDictionary<Guid, DataRow> Rows
+        {
+            get { return rows.AsReadOnly(); }
+        }
+
         public string Size
         {
-            get { return Rows.Count + "x" + columnTypes.Count; }
+            get { return rows.Count + "x" + Width; }
         }
         public int Width
         {
@@ -37,6 +39,27 @@ namespace In_Memory_Database.Classes
         public DataTable(string tableName)
         {
             Name = tableName;
+        }
+
+        [JsonConstructor]
+        public DataTable(
+            string name,
+            List<Type> columnTypes,
+            List<string> columnNames,
+            Dictionary<Guid, DataRow> rows
+        )
+        {
+            Name = name;
+            this.columnTypes = columnTypes;
+            this.columnNames = columnNames;
+            foreach (DataRow row in rows.Values)
+            {
+                for (int i = 0; i < Width; i++)
+                {
+                    row[i] = Convert.ChangeType(row[i], columnTypes[i]);
+                }
+            }
+            this.rows = rows;
         }
 
         public void AddColumn<T>(string name)
@@ -55,12 +78,12 @@ namespace In_Memory_Database.Classes
 
         public void AddRow(DataRow values)
         {
-            if (values.Count != columnTypes.Count)
+            if (values.Count != Width)
             {
                 throw new ArgumentException("Input doesn't match the table column's length");
             }
             //use a loop here to check beforehand if all the types match first
-            for (int i = 0; i < columnTypes.Count; i++)
+            for (int i = 0; i < Width; i++)
             {
                 if (values[i].GetType() != columnTypes[i])
                 {
@@ -68,38 +91,38 @@ namespace In_Memory_Database.Classes
                 }
             }
             //add the row to the table
-            Rows[Guid.NewGuid()] = values;
+            rows[Guid.NewGuid()] = values;
         }
 
         public void RemoveRow(SearchConditions conditions)
         {
-            List<Guid> toBeRemovedRows = SearchManager.SearchTableForIdUsingConditions(
+            List<Guid> toBeRemovedrows = SearchManager.SearchTableForIdUsingConditions(
                 this,
                 conditions
             );
 
-            if (toBeRemovedRows.Count == 0)
+            if (toBeRemovedrows.Count == 0)
             {
                 throw new ArgumentException("Couldn't find any row with that condition");
             }
-            foreach (var row in toBeRemovedRows)
+            foreach (var row in toBeRemovedrows)
             {
-                Rows.Remove(row);
+                rows.Remove(row);
             }
         }
 
         public List<DataRow> Find(SearchConditions conditions)
         {
             List<Guid> rowsIds = SearchManager.SearchTableForIdUsingConditions(this, conditions);
-            List<DataRow> foundRows = new();
+            List<DataRow> foundrows = new();
             foreach (Guid id in rowsIds)
             {
-                foundRows.Add(Rows[id]);
+                foundrows.Add(rows[id]);
             }
-            return foundRows;
+            return foundrows;
         }
 
-        public void SaveToDisk() => FileManager.SaveToDisk(this, "./DataTable/rows.txt");
+        public void SaveToDisk(string dir) => FileManager.SaveToDisk(this, dir);
 
         public void ReadFromDisk() { }
 

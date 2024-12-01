@@ -13,7 +13,7 @@ namespace Web_API_Database.Classes
         )
         {
             ReadOnlyCollection<string> columnNames = table.ColumnNames;
-            Dictionary<Guid, DataRow> rows = table.Rows;
+            ReadOnlyDictionary<Guid, DataRow> rows = table.Rows;
 
             int targetColumnIndex = -1;
             for (int i = 0; i < columnNames.Count; i++)
