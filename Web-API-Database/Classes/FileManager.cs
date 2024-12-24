@@ -13,7 +13,7 @@ public class FileManager
         File.WriteAllText(path, jsonString);
     }
 
-    public static List<DataTable> ReadFromDisk(string dir)
+    public static List<DataTable> LoadFromDisk(string dir)
     {
         string[] tablesToBeGenerated = Directory.GetFiles(dir);
         List<DataTable> tablesToReturn = [];

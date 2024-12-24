@@ -1,39 +1,64 @@
-﻿using System.Collections.ObjectModel;
-using System.Reflection;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Collections.ObjectModel;
+using System.Reflection;
 using Web_API_Database.Classes;
 
 namespace In_Memory_Database.Classes
 {
-    public class DataTable : DefaultContractResolver
+    public class DataTable :DefaultContractResolver
     {
-        public string Name { get; set; }
+        public string Name
+        {
+            get; set;
+        }
         private List<Type> columnTypes = [];
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get { return columnTypes.AsReadOnly(); }
+            get
+            {
+                return columnTypes.AsReadOnly();
+            }
         }
         private List<string> columnNames = [];
         public ReadOnlyCollection<string> ColumnNames
         {
-            get { return columnNames.AsReadOnly(); }
+            get
+            {
+                return columnNames.AsReadOnly();
+            }
         }
+        private List<DataRow> rows = [];
 
-        private Dictionary<Guid, DataRow> rows = [];
-
-        public ReadOnlyDictionary<Guid, DataRow> Rows
+        public ReadOnlyCollection<DataRow> Rows
         {
-            get { return rows.AsReadOnly(); }
+            get
+            {
+                return rows.AsReadOnly();
+            }
+        }
+        private Dictionary<string, IndexTable> indexTables = [];
+        public ReadOnlyDictionary<string, IndexTable> IndexTables
+        {
+            get
+            {
+                return indexTables.AsReadOnly();
+            }
         }
 
         public string Size
         {
-            get { return rows.Count + "x" + Width; }
+            get
+            {
+                return rows.Count + "x" + Width;
+            }
         }
         public int Width
         {
-            get { return columnTypes.Count; }
+            get
+            {
+                return columnTypes.Count;
+            }
         }
 
         public DataTable(string tableName)
@@ -46,13 +71,15 @@ namespace In_Memory_Database.Classes
             string name,
             List<Type> columnTypes,
             List<string> columnNames,
-            Dictionary<Guid, DataRow> rows
+            List<DataRow> rows,
+            Dictionary<string, IndexTable> indexTables
         )
         {
             Name = name;
             this.columnTypes = columnTypes;
             this.columnNames = columnNames;
-            foreach (DataRow row in rows.Values)
+            this.indexTables = indexTables;
+            foreach (DataRow row in rows)
             {
                 for (int i = 0; i < Width; i++)
                 {
@@ -74,29 +101,35 @@ namespace In_Memory_Database.Classes
             {
                 throw new ArgumentException("Column doesn't exist");
             }
+            indexTables.Remove(name);
         }
 
-        public void AddRow(DataRow values)
+        public void AddRow(DataRow newRow)
         {
-            if (values.Count != Width)
+            if (newRow.Count != Width)
             {
                 throw new ArgumentException("Input doesn't match the table column's length");
             }
             //use a loop here to check beforehand if all the types match first
             for (int i = 0; i < Width; i++)
             {
-                if (values[i].GetType() != columnTypes[i])
+                if (newRow[i].GetType() != columnTypes[i])
                 {
                     throw new ArgumentException("Input doesn't match the table column's type");
                 }
             }
-            //add the row to the table
-            rows[Guid.NewGuid()] = values;
+            //add the row to current table and also index table
+            rows.Add(newRow);
+            foreach (KeyValuePair<string, IndexTable> pair in indexTables)
+            {
+                int position = columnNames.FindIndex((string c)=> pair.Key==c);
+                pair.Value.Insert(position, newRow);
+            }
         }
 
         public void RemoveRow(SearchConditions conditions)
         {
-            List<Guid> toBeRemovedrows = SearchManager.SearchTableForIdUsingConditions(
+            List<DataRow> toBeRemovedrows = SearchManager.Get(
                 this,
                 conditions
             );
@@ -109,30 +142,55 @@ namespace In_Memory_Database.Classes
             {
                 rows.Remove(row);
             }
+            foreach (KeyValuePair<string, IndexTable> pair in indexTables)
+            {
+                int position = columnNames.FindIndex((string c)=> pair.Key==c);
+                pair.Value.Delete(position, toBeRemovedrows[0]);
+            }
         }
 
         public List<DataRow> Find(SearchConditions conditions)
         {
-            List<Guid> rowsIds = SearchManager.SearchTableForIdUsingConditions(this, conditions);
-            List<DataRow> foundrows = new();
-            foreach (Guid id in rowsIds)
-            {
-                foundrows.Add(rows[id]);
-            }
-            return foundrows;
+            return SearchManager.Get(this, conditions);
         }
 
         public void SaveToDisk(string dir) => FileManager.SaveToDisk(this, dir);
 
-        public void ReadFromDisk() { }
+        public void LoadFromDisk(string dir)
+        {
+            FileManager.LoadFromDisk(dir);
+        }
 
-        public void StartTransaction() { }
+        public void StartTransaction()
+        {
+        }
 
-        public void CommitTransaction() { }
+        public void CommitTransaction()
+        {
+        }
 
-        public void CreateIndex() { }
+        public void CreateIndex(string targetColumn)
+        {
+            for (int i = 0; i < this.Width; i++)
+            {
+                if (columnNames[i] == targetColumn)
+                {
+                    var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
+                        columnTypes[i]
+                    );
+                    object indexTableInstance = Activator.CreateInstance(
+                        genericIndexTableType,
+                        i,
+                        rows
+                    );
+                    indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                }
+            }
+        }
 
-        public void RemoveIndex() { }
+        public void RemoveIndex()
+        {
+        }
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
         {

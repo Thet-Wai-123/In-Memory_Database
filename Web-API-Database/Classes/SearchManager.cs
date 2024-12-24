@@ -1,20 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using In_Memory_Database.Classes;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using In_Memory_Database.Classes;
 
 namespace Web_API_Database.Classes
 {
-    //my plan is to add more stuffs here such as a query planner
     public static class SearchManager
     {
-        public static List<Guid> SearchTableForIdUsingConditions(
+        public static List<DataRow> Get(
             DataTable table,
             SearchConditions conditions
         )
         {
             ReadOnlyCollection<string> columnNames = table.ColumnNames;
-            ReadOnlyDictionary<Guid, DataRow> rows = table.Rows;
+            ReadOnlyCollection<DataRow> rows = table.Rows;
 
+            //First making sure that the column exists
             int targetColumnIndex = -1;
             for (int i = 0; i < columnNames.Count; i++)
             {
@@ -24,46 +24,64 @@ namespace Web_API_Database.Classes
                     break;
                 }
             }
-
             if (targetColumnIndex == -1)
             {
                 return [];
             }
 
-            List<Guid> matchingIds = new();
-
-            // Iterate through the rows and check the condition
-            foreach (var row in rows)
+            //It does exist, so search
+            List<DataRow> matchingRows;
+            //Checking if an index exists to use
+            if (table.IndexTables.ContainsKey(conditions.ColumnName))
             {
-                Guid id = row.Key;
-                List<dynamic> values = row.Value;
+                var indexTable = table.IndexTables[conditions.ColumnName];
+                matchingRows = IndexSearch(indexTable, conditions.Value, conditions.Op);
+            }
+            else
+            {
+                matchingRows = SequentialSearch(rows, targetColumnIndex, conditions);
+            }
+            return matchingRows;
+        }
 
-                if (values.Count > targetColumnIndex)
+        private static List<DataRow> IndexSearch(IndexTable indexTable, object keyValue, string op)
+        {
+            return indexTable.Search(keyValue, op);
+        }
+
+        private static List<DataRow> SequentialSearch(
+            ReadOnlyCollection<DataRow> rows,
+            int targetColumnIndex,
+            SearchConditions conditions
+        )
+        {
+            List<DataRow> matchingRows = [];
+            foreach (DataRow row in rows)
+            {
+                if (row.Count > targetColumnIndex)
                 {
-                    dynamic valueToCheck = values[targetColumnIndex];
-                    if (CheckCondition(valueToCheck, conditions.Op, conditions.Value))
+                    dynamic valueToCheck = row[targetColumnIndex];
+                    if (CheckConditionOneByOne(valueToCheck, conditions.Op, conditions.Value))
                     {
-                        matchingIds.Add(id);
+                        matchingRows.Add(row);
                     }
                 }
             }
-            return matchingIds;
-        }
+            return matchingRows;
 
-        private static bool CheckCondition(dynamic value, string op, dynamic targetValue)
-        {
-            switch (op)
+            bool CheckConditionOneByOne(dynamic value, string op, dynamic targetValue)
             {
-                case "==":
-                    return value == targetValue;
-                case "!=":
-                    return value != targetValue;
-                case ">":
-                    return value > targetValue;
-                case "<":
-                    return value < targetValue;
-                default:
-                    throw new ArgumentException($"Unsupported operator: {op}");
+                switch (op)
+                {
+                    case "==":
+                        return value == targetValue;
+                    case ">=":
+                        return value >= targetValue;
+                    case "<=":
+                        return value <= targetValue;
+                    default:
+                        throw new ArgumentException($"Unsupported operator: {op}");
+                }
             }
         }
     }

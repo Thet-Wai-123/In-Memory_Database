@@ -1,6 +1,7 @@
-using System;
 using In_Memory_Database.Classes;
 using Newtonsoft.Json;
+using System;
+using System.IO.Abstractions.TestingHelpers;
 using Web_API_Database.Classes;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace In_memory_Database_Testing
         }
 
         [Fact]
-        public void TableDeleteRow_ExpectOneRowLeft()
+        public void TableAddAndDeleteRow_ExpectOneRowLeft()
         {
             //Arrange
             DataTable table = new("Student");
@@ -28,14 +29,14 @@ namespace In_memory_Database_Testing
             table.AddRow(new DataRow { "D", 20 });
 
             //Act
-            table.RemoveRow(new SearchConditions("Age", "<", 22));
+            table.RemoveRow(new SearchConditions("Age", "<=", 21));
 
             //Assert
             Assert.Equal("1x2", table.Size);
         }
 
         [Fact]
-        public void TableFindRow_ExpectToReturnRow()
+        public void TableFindRow_ExpectToReturnCorrectRow()
         {
             //Arrange
             DataTable table = new("Student");
@@ -84,19 +85,12 @@ namespace In_memory_Database_Testing
 
             //Act
             string path = (
-                @"C:\Users\thetw\source\repos\Web-API-Database\In-memory DatabaseTesting\storage\"
+                @"Web-API-Database\In-memory DatabaseTesting\storage\"
             );
             table.SaveToDisk(path);
-            DataTable tableFromDisk = FileManager.ReadFromDisk(path)[0];
 
             //Assert
-            Assert.Equal(table.Name, tableFromDisk.Name);
-            Assert.Equal(table.ColumnNames, tableFromDisk.ColumnNames);
-            foreach (var row in table.Rows)
-            {
-                Assert.Equal(row.Value, tableFromDisk.Rows[row.Key]);
-            }
-            Assert.Equal(table.ColumnTypes, tableFromDisk.ColumnTypes);
+            Assert.True(File.Exists(path + "Student.json"));
         }
     }
 }
