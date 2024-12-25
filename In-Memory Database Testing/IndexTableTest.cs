@@ -1,15 +1,8 @@
 ﻿using In_Memory_Database.Classes;
 using Microsoft.CSharp.RuntimeBinder;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
-using Web_API_Database.Classes;
 using Xunit.Abstractions;
 
-namespace In_memory_Database_Testing
+namespace In_Memory_Database_Testing
 {
     public class IndexTableTest
     {

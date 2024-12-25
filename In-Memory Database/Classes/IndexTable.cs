@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Xml.Linq;
 
-namespace Web_API_Database.Classes
+namespace In_Memory_Database.Classes
 {
     public abstract class IndexTable
     {

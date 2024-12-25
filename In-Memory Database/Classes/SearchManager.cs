@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Web_API_Database.Classes
+namespace In_Memory_Database.Classes
 {
     public static class SearchManager
     {

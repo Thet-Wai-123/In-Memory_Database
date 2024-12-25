@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>In_memory_Database_Testing</RootNamespace>
+    <RootNamespace>In_Memory_Database_Testing</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Web-API-Database\In-memory Database.csproj" />
+    <ProjectReference Include="..\In-Memory Database\In-Memory Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>

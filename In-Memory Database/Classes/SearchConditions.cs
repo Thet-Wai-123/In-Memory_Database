@@ -1,4 +1,4 @@
-﻿namespace Web_API_Database.Classes
+﻿namespace In_Memory_Database.Classes
 {
     public class SearchConditions
     {

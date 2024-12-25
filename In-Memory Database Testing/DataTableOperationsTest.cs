@@ -1,11 +1,7 @@
 using In_Memory_Database.Classes;
-using Newtonsoft.Json;
-using System;
-using System.IO.Abstractions.TestingHelpers;
-using Web_API_Database.Classes;
 using Xunit.Abstractions;
 
-namespace In_memory_Database_Testing
+namespace In_Memory_Database_Testing
 {
     public class DataTableOperationsTest
     {
