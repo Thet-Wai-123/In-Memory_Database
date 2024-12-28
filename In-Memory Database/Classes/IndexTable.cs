@@ -1,8 +1,8 @@
-﻿using CodeExMachina;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Xml.Linq;
+using CodeExMachina;
+using Newtonsoft.Json.Linq;
 
 namespace In_Memory_Database.Classes
 {
@@ -15,7 +15,7 @@ namespace In_Memory_Database.Classes
         protected int degree = 2;
     }
 
-    public class IndexTable<T> :IndexTable
+    public class IndexTable<T> : IndexTable
         where T : IComparable<T>
     {
         private readonly BTree<Node<T>> btree;
@@ -25,17 +25,16 @@ namespace In_Memory_Database.Classes
             btree = new(degree, new KeyComparer<T>());
             foreach (DataRow row in rows)
             {
-                Node<T> newNode = new(row[columnIndex], [row]);
+                Node<T> newNode = new(row[columnIndex], new List<DataRow> { row });
                 HandleInsertWithPossibleDuplicate(newNode);
             }
         }
-
 
         public override List<DataRow> Search(object keyValue, string op)
         {
             List<DataRow> matchingRows = [];
             T key = (T)keyValue;
-            Node<T> pivotNode = new(key, null);
+            Node<T> pivotNode = new(key, []);
             List<Node<T>> foundNodes = [];
             if (op == "==")
             {
@@ -47,19 +46,25 @@ namespace In_Memory_Database.Classes
             }
             else if (op == ">=")
             {
-                btree.AscendGreaterOrEqual(pivotNode, (Node<T> n) =>
-                {
-                    foundNodes.Add(n);
-                    return true;
-                });
+                btree.AscendGreaterOrEqual(
+                    pivotNode,
+                    (Node<T> n) =>
+                    {
+                        foundNodes.Add(n);
+                        return true;
+                    }
+                );
             }
             else if (op == "<=")
             {
-                btree.DescendLessOrEqual(pivotNode, (Node<T> n) =>
-                {
-                    foundNodes.Add(n);
-                    return true;
-                });
+                btree.DescendLessOrEqual(
+                    pivotNode,
+                    (Node<T> n) =>
+                    {
+                        foundNodes.Add(n);
+                        return true;
+                    }
+                );
             }
             else
             {
@@ -74,26 +79,20 @@ namespace In_Memory_Database.Classes
 
         public override void Insert(int columnIndex, DataRow row)
         {
-            Node<T> newNode = new(row[columnIndex], [row]);
+            Node<T> newNode = new(row[columnIndex], new List<DataRow> { row });
             HandleInsertWithPossibleDuplicate(newNode);
         }
 
         public override void Delete(int columnIndex, DataRow row)
         {
-            btree.Delete(new Node<T>(row[columnIndex], [row]));
+            btree.Delete(new Node<T>(row[columnIndex], new List<DataRow> { row }));
         }
 
         private class Node<TKey>
             where TKey : IComparable<TKey>
         {
-            public TKey Key
-            {
-                get;
-            }
-            public List<DataRow> Value
-            {
-                get;
-            }
+            public TKey Key { get; }
+            public List<DataRow> Value { get; }
 
             public Node(TKey key, List<DataRow> value)
             {
@@ -102,7 +101,7 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        private class KeyComparer<TKey> :Comparer<Node<TKey>>
+        private class KeyComparer<TKey> : Comparer<Node<TKey>>
             where TKey : IComparable<TKey>
         {
             public override int Compare(Node<TKey> a, Node<TKey> b)

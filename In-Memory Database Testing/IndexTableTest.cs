@@ -48,7 +48,7 @@ namespace In_Memory_Database_Testing
         }
 
         [Fact]
-        public void DeletingRowsThatAreIndexed()
+        public void DeletingRowsWithIndexSearch()
         {
             //Arrange
             const int columnIndex = 1;
@@ -61,12 +61,11 @@ namespace In_Memory_Database_Testing
             //Act
             indexTable.Delete(columnIndex, row2);
             List<DataRow> result = indexTable.Search(2, ">=");
-            _testOutputHelper.WriteLine(result.ToString());
+            //_testOutputHelper.WriteLine(result.ToString());
 
             //Assert
             Assert.Equal([row3], result);
         }
-
 
         [Fact]
         public void HandlingDuplicateValues()
@@ -80,13 +79,14 @@ namespace In_Memory_Database_Testing
 
             //Act
             List<DataRow> result = indexTable.Search(1, "==");
-            _testOutputHelper.WriteLine(result.ToString());
+            //_testOutputHelper.WriteLine(result.ToString());
 
             //Assert
             Assert.Equal([row1, row2], result, ScrambledEquals);
         }
 
         private static bool ScrambledEquals<T>(IEnumerable<T> list1, IEnumerable<T> list2)
+            where T : notnull
         {
             var cnt = new Dictionary<T, int>();
             foreach (T s in list1)

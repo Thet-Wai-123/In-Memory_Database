@@ -1,68 +1,54 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace In_Memory_Database.Classes
 {
-    public class DataTable :DefaultContractResolver
+    public class DataTable : DefaultContractResolver
     {
-        public string Name
-        {
-            get; set;
-        }
+        public string Name { get; set; }
         private List<Type> columnTypes = [];
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get
-            {
-                return columnTypes.AsReadOnly();
-            }
+            get { return columnTypes.AsReadOnly(); }
         }
         private List<string> columnNames = [];
         public ReadOnlyCollection<string> ColumnNames
         {
-            get
-            {
-                return columnNames.AsReadOnly();
-            }
+            get { return columnNames.AsReadOnly(); }
         }
         private List<DataRow> rows = [];
 
         public ReadOnlyCollection<DataRow> Rows
         {
-            get
-            {
-                return rows.AsReadOnly();
-            }
+            get { return rows.AsReadOnly(); }
         }
         private Dictionary<string, IndexTable> indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get
-            {
-                return indexTables.AsReadOnly();
-            }
+            get { return indexTables.AsReadOnly(); }
         }
 
         public string Size
         {
-            get
-            {
-                return rows.Count + "x" + Width;
-            }
+            get { return rows.Count + "x" + Width; }
         }
         public int Width
         {
-            get
-            {
-                return columnTypes.Count;
-            }
+            get { return columnTypes.Count; }
         }
 
         public DataTable(string tableName)
         {
             Name = tableName;
+        }
+
+        public DataTable(string tableName, List<string> columnNames, List<Type> columnTypes)
+        {
+            Name = tableName;
+            this.columnNames = columnNames;
+            this.columnTypes = columnTypes;
         }
 
         [JsonConstructor]
@@ -88,9 +74,9 @@ namespace In_Memory_Database.Classes
             this.rows = rows;
         }
 
-        public void AddColumn<T>(string name)
+        public void AddColumn(string name, Type type)
         {
-            columnTypes.Add(typeof(T));
+            columnTypes.Add(type);
             columnNames.Add(name);
         }
 
@@ -121,17 +107,14 @@ namespace In_Memory_Database.Classes
             rows.Add(newRow);
             foreach (KeyValuePair<string, IndexTable> pair in indexTables)
             {
-                int position = columnNames.FindIndex((string c)=> pair.Key==c);
+                int position = columnNames.FindIndex((string c) => pair.Key == c);
                 pair.Value.Insert(position, newRow);
             }
         }
 
         public void RemoveRow(SearchConditions conditions)
         {
-            List<DataRow> toBeRemovedrows = SearchManager.Get(
-                this,
-                conditions
-            );
+            List<DataRow> toBeRemovedrows = SearchManager.Get(this, conditions);
 
             if (toBeRemovedrows.Count == 0)
             {
@@ -143,7 +126,7 @@ namespace In_Memory_Database.Classes
             }
             foreach (KeyValuePair<string, IndexTable> pair in indexTables)
             {
-                int position = columnNames.FindIndex((string c)=> pair.Key==c);
+                int position = columnNames.FindIndex((string c) => pair.Key == c);
                 pair.Value.Delete(position, toBeRemovedrows[0]);
             }
         }
@@ -160,13 +143,9 @@ namespace In_Memory_Database.Classes
             FileManager.LoadFromDisk(dir);
         }
 
-        public void StartTransaction()
-        {
-        }
+        public void StartTransaction() { }
 
-        public void CommitTransaction()
-        {
-        }
+        public void CommitTransaction() { }
 
         public void CreateIndex(string targetColumn)
         {
@@ -187,9 +166,7 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public void RemoveIndex()
-        {
-        }
+        public void RemoveIndex() { }
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
         {

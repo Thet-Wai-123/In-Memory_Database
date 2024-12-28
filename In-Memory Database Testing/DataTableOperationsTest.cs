@@ -17,8 +17,8 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             DataTable table = new("Student");
-            table.AddColumn<string>("Name");
-            table.AddColumn<int>("Age");
+            table.AddColumn("Name", typeof(string));
+            table.AddColumn("Age", typeof(int));
             table.AddRow(new DataRow { "A", 20 });
             table.AddRow(new DataRow { "B", 21 });
             table.AddRow(new DataRow { "C", 22 });
@@ -36,8 +36,8 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             DataTable table = new("Student");
-            table.AddColumn<string>("Name");
-            table.AddColumn<int>("Age");
+            table.AddColumn("Name", typeof(string));
+            table.AddColumn("Age", typeof(int));
             table.AddRow(new DataRow { "A", 20 });
             table.AddRow(new DataRow { "B", 21 });
             table.AddRow(new DataRow { "C", 22 });
@@ -68,25 +68,26 @@ namespace In_Memory_Database_Testing
         }
 
         [Fact]
-        public void SavingToDisk_ExpectAFileWithInfos()
+        public void SavingAndLoading_ExpectEqualInfos()
         {
             //Arrange
             DataTable table = new("Student");
-            table.AddColumn<string>("Name");
-            table.AddColumn<int>("Age");
+            table.AddColumn("Name", typeof(string));
+            table.AddColumn("Age", typeof(int));
             table.AddRow(new DataRow { "A", 20 });
             table.AddRow(new DataRow { "B", 21 });
             table.AddRow(new DataRow { "C", 22 });
             table.AddRow(new DataRow { "D", 20 });
 
             //Act
-            string path = (
-                @"Web-API-Database\In-memory DatabaseTesting\storage\"
-            );
+            string path = (@"Web-API-Database\In-memory DatabaseTesting\temp\");
             table.SaveToDisk(path);
+            DataTable loadedTable = FileManager.LoadFromDisk(path)[0];
 
             //Assert
             Assert.True(File.Exists(path + "Student.json"));
+            Assert.Equal(table.Name, loadedTable.Name);
+            Assert.Equal(table.Rows, loadedTable.Rows);
         }
     }
 }
