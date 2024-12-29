@@ -70,6 +70,8 @@ namespace In_Memory_Database_Testing
         [Fact]
         public void SavingAndLoading_ExpectEqualInfos()
         {
+            _testOutputHelper.WriteLine(System.AppDomain.CurrentDomain.BaseDirectory);
+
             //Arrange
             DataTable table = new("Student");
             table.AddColumn("Name", typeof(string));
@@ -80,7 +82,7 @@ namespace In_Memory_Database_Testing
             table.AddRow(new DataRow { "D", 20 });
 
             //Act
-            string path = (@"Web-API-Database\In-memory DatabaseTesting\temp\");
+            string path = (@"temp\");
             table.SaveToDisk(path);
             DataTable loadedTable = FileManager.LoadFromDisk(path)[0];
 
@@ -88,6 +90,8 @@ namespace In_Memory_Database_Testing
             Assert.True(File.Exists(path + "Student.json"));
             Assert.Equal(table.Name, loadedTable.Name);
             Assert.Equal(table.Rows, loadedTable.Rows);
+
+            Directory.Delete(path, true);
         }
     }
 }
