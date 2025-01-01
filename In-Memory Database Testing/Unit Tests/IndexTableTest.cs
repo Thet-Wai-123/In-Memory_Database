@@ -85,6 +85,7 @@ namespace In_Memory_Database_Testing
             Assert.Equal([row1, row2], result, ScrambledEquals);
         }
 
+        //Comparing two lists without caring about the order
         private static bool ScrambledEquals<T>(IEnumerable<T> list1, IEnumerable<T> list2)
             where T : notnull
         {

@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 public class FileManager
 {
-    public static void SaveToDisk(DataTable table, string dir)
+    public static void SaveToDisk(IDataTable table, string dir)
     {
         string jsonString = JsonConvert.SerializeObject(table);
 
@@ -13,10 +13,10 @@ public class FileManager
         File.WriteAllText(path, jsonString);
     }
 
-    public static List<DataTable> LoadFromDisk(string dir)
+    public static List<IDataTable> LoadFromDisk(string dir)
     {
         string[] tablesToBeGenerated = Directory.GetFiles(dir);
-        List<DataTable> tablesToReturn = [];
+        List<IDataTable> tablesToReturn = [];
 
         foreach (string tablePath in tablesToBeGenerated)
         {

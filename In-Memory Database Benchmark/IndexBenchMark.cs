@@ -12,40 +12,34 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 //dotnet run -c Release
 namespace In_Memory_Database_Benchmark
 {
-    [SimpleJob(
-        RunStrategy.ColdStart /*, iterationCount: 1*/
-    )]
+    [SimpleJob(RunStrategy.ColdStart, iterationCount: 1)]
     public class IndexBenchMark
     {
         static readonly int rowCount = 1000000;
 
         Random rnd = new();
-        static List<string> columnNames = new() { "Name", "Age", "Weight", "IsAlive" };
-        static List<Type> types =
-            new() { typeof(string), typeof(int), typeof(double), typeof(bool) };
+        static List<string> columnNames = ["Name", "Age", "Weight", "IsAlive"];
+        static List<Type> types = [typeof(string), typeof(int), typeof(double), typeof(bool)];
 
-        DataTable nonIndexedTable = new("NonIndexed", columnNames, types);
-        DataTable indexedTable = new("Indexed", columnNames, types);
-        DataTable tempTable = new("Temp", columnNames, types);
+        static SearchManager searchManager = new();
 
-        DataRow rowToFind;
+        DataTable tempTable = new("Temp", columnNames, types, searchManager);
+
+        DataRow? rowToFind;
 
         [GlobalSetup(Target = nameof(CreatingIndex))]
-        public void SetupA()
+        public void SetupWithoutIndex()
         {
             FillInTableWithRandomRows(tempTable);
             rowToFind = tempTable.Rows[rnd.Next(1, rowCount)];
         }
 
-        [GlobalSetup(
-            Targets = new[] { nameof(SearchStringWithoutIndex), nameof(SearchStringWithIndex) }
-        )]
-        public void SetupB()
+        [GlobalSetup(Targets = [nameof(SearchStringWithoutIndex), nameof(SearchStringWithIndex)])]
+        public void SetupWithIndex()
         {
-            FillInTableWithRandomRows(indexedTable);
-            FillInTableWithRandomRows(nonIndexedTable);
-            indexedTable.CreateIndex("Name");
-            rowToFind = nonIndexedTable.Rows[rnd.Next(1, rowCount)];
+            FillInTableWithRandomRows(tempTable);
+            tempTable.CreateIndex("Name");
+            rowToFind = tempTable.Rows[rnd.Next(1, rowCount)];
         }
 
         [Benchmark]
@@ -57,16 +51,16 @@ namespace In_Memory_Database_Benchmark
         [Benchmark]
         public List<DataRow> SearchStringWithoutIndex()
         {
-            return nonIndexedTable.Find(new SearchConditions("Name", "==", rowToFind[0]));
+            return tempTable.Get(new SearchConditions("Name", "==", rowToFind[0]), false);
         }
 
         [Benchmark]
         public List<DataRow> SearchStringWithIndex()
         {
-            return indexedTable.Find(new SearchConditions("Name", "==", rowToFind[0]));
+            return tempTable.Get(new SearchConditions("Name", "==", rowToFind[0]), true);
         }
 
-        private void FillInTableWithRandomRows(DataTable table)
+        private void FillInTableWithRandomRows(IDataTable table)
         {
             for (int i = 0; i < rowCount; i++)
             {
@@ -81,7 +75,7 @@ namespace In_Memory_Database_Benchmark
             var param2 = rnd.Next(1, 100);
             var param3 = Math.Round(rnd.NextDouble() * 100, 2);
             var param4 = rnd.Next(0, 2) == 1;
-            DataRow row = [param1, param2, param3, param4];
+            var row = new DataRow() { param1, param2, param3, param4 };
             return row;
         }
 

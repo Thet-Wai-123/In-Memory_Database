@@ -1,24 +1,29 @@
-﻿using In_Memory_Database.Classes;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using In_Memory_Database.Classes;
 
 namespace In_Memory_Database.Classes
 {
-    public static class SearchManager
+    public class SearchManager : ISearchManager
     {
-        public static List<DataRow> Get(
-            DataTable table,
-            SearchConditions conditions
+        //A general search and will automatically use search by index if it exists, otherwise sequential search
+        public List<DataRow> Search(
+            ReadOnlyCollection<string> columnNames,
+            ReadOnlyCollection<DataRow> rows,
+            SearchConditions conditions,
+            ReadOnlyDictionary<string, IndexTable> indexTables,
+            bool useIndex = true
         )
         {
-            ReadOnlyCollection<string> columnNames = table.ColumnNames;
-            ReadOnlyCollection<DataRow> rows = table.Rows;
+            ReadOnlyCollection<string> _columnNames = columnNames;
+            ReadOnlyCollection<DataRow> _rows = rows;
+            ReadOnlyDictionary<string, IndexTable> _indexTables = indexTables;
 
             //First making sure that the column exists
             int targetColumnIndex = -1;
-            for (int i = 0; i < columnNames.Count; i++)
+            for (int i = 0; i < _columnNames.Count; i++)
             {
-                if (columnNames[i] == conditions.ColumnName)
+                if (_columnNames[i] == conditions.ColumnName)
                 {
                     targetColumnIndex = i;
                     break;
@@ -31,25 +36,28 @@ namespace In_Memory_Database.Classes
 
             //It does exist, so search
             List<DataRow> matchingRows;
+
             //Checking if an index exists to use
-            if (table.IndexTables.ContainsKey(conditions.ColumnName))
+            if (useIndex && _indexTables.ContainsKey(conditions.ColumnName))
             {
-                var indexTable = table.IndexTables[conditions.ColumnName];
-                matchingRows = IndexSearch(indexTable, conditions.Value, conditions.Op);
+                var indexTable = _indexTables[conditions.ColumnName];
+                matchingRows = IndexSearch(indexTable, conditions);
             }
             else
             {
-                matchingRows = SequentialSearch(rows, targetColumnIndex, conditions);
+                matchingRows = SequentialSearch(_rows, targetColumnIndex, conditions);
             }
             return matchingRows;
         }
 
-        private static List<DataRow> IndexSearch(IndexTable indexTable, object keyValue, string op)
+        private List<DataRow> IndexSearch(IndexTable indexTable, SearchConditions conditions)
         {
+            dynamic keyValue = conditions.Value;
+            string op = conditions.Op;
             return indexTable.Search(keyValue, op);
         }
 
-        private static List<DataRow> SequentialSearch(
+        private List<DataRow> SequentialSearch(
             ReadOnlyCollection<DataRow> rows,
             int targetColumnIndex,
             SearchConditions conditions
