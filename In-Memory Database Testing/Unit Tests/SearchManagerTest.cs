@@ -17,7 +17,7 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var searchManager = new SearchManager();
-            var rows = new List<DataRow>([]);
+            var rows = new List<DataRow>();
             var mockTable = new Mock<IDataTable>();
             mockTable.SetupGet(x => x.Rows).Returns(new ReadOnlyCollection<DataRow>(rows));
             mockTable.SetupGet(x => x.ColumnNames).Returns(new ReadOnlyCollection<string>(["Age"]));
@@ -47,12 +47,16 @@ namespace In_Memory_Database_Testing
                 mockTable.Object.ColumnNames,
                 mockTable.Object.Rows,
                 condition,
-                mockTable.Object.IndexTables,
-                true
+                mockTable.Object.IndexTables
             );
 
             //Assert
-            Assert.Equal([row2], searchResult);
+            Assert.Equal(
+                [
+                    [21]
+                ],
+                searchResult
+            );
         }
     }
 }

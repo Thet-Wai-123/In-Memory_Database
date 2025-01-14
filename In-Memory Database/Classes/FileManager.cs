@@ -1,31 +1,35 @@
 ﻿using In_Memory_Database.Classes;
 using Newtonsoft.Json;
 
-public class FileManager
+public class FileManager : IFileManager
 {
-    public static void SaveToDisk(IDataTable table, string dir)
+    public void SaveTodisk(Database db, string dir)
     {
-        string jsonString = JsonConvert.SerializeObject(table);
+        foreach (var table in db.tables)
+        {
+            string jsonString = JsonConvert.SerializeObject(table);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(dir));
-        string path = $"{dir}{table.Name}.json";
+            Directory.CreateDirectory(Path.GetDirectoryName(dir));
+            string path = $"{dir}{table.Name}.json";
 
-        File.WriteAllText(path, jsonString);
+            File.WriteAllText(path, jsonString);
+        }
     }
 
-    public static List<IDataTable> LoadFromDisk(string dir)
+    public List<DataTable> LoadFromDisk(string dir)
     {
-        string[] tablesToBeGenerated = Directory.GetFiles(dir);
-        List<IDataTable> tablesToReturn = [];
+        string[] tablesFoundInDir = Directory.GetFiles(dir);
+        List<DataTable> tablesGenerated = [];
 
-        foreach (string tablePath in tablesToBeGenerated)
+        foreach (string tablePath in tablesFoundInDir)
         {
             using (StreamReader sr = File.OpenText(tablePath))
             {
                 string infoJson = sr.ReadToEnd();
-                tablesToReturn.Add(JsonConvert.DeserializeObject<DataTable>(infoJson));
+                var deserializedTable = (JsonConvert.DeserializeObject<DataTable>(infoJson));
+                tablesGenerated.Add(deserializedTable);
             }
         }
-        return tablesToReturn;
+        return tablesGenerated;
     }
 }

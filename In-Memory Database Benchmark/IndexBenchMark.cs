@@ -21,9 +21,9 @@ namespace In_Memory_Database_Benchmark
         static List<string> columnNames = ["Name", "Age", "Weight", "IsAlive"];
         static List<Type> types = [typeof(string), typeof(int), typeof(double), typeof(bool)];
 
-        static SearchManager searchManager = new();
+        SearchManager searchManager = new();
 
-        DataTable tempTable = new("Temp", columnNames, types, searchManager);
+        DataTable tempTable = new("Temp", columnNames, types);
 
         DataRow? rowToFind;
 
@@ -51,13 +51,27 @@ namespace In_Memory_Database_Benchmark
         [Benchmark]
         public List<DataRow> SearchStringWithoutIndex()
         {
-            return tempTable.Get(new SearchConditions("Name", "==", rowToFind[0]), false);
+            var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            return searchManager.Search(
+                tempTable.ColumnNames,
+                tempTable.Rows,
+                condition,
+                tempTable.IndexTables,
+                false
+            );
         }
 
         [Benchmark]
         public List<DataRow> SearchStringWithIndex()
         {
-            return tempTable.Get(new SearchConditions("Name", "==", rowToFind[0]), true);
+            var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            return searchManager.Search(
+                tempTable.ColumnNames,
+                tempTable.Rows,
+                condition,
+                tempTable.IndexTables,
+                true
+            );
         }
 
         private void FillInTableWithRandomRows(IDataTable table)

@@ -43,25 +43,16 @@ namespace In_Memory_Database.Classes
             get { return _rows.Count; }
         }
 
-        private ISearchManager _searchManager;
-
-        public DataTable(string tableName, ISearchManager searchManager)
+        public DataTable(string tableName)
         {
             Name = tableName;
-            _searchManager = searchManager;
         }
 
-        public DataTable(
-            string tableName,
-            List<string> columnNames,
-            List<Type> columnTypes,
-            ISearchManager searchManager
-        )
+        public DataTable(string tableName, List<string> columnNames, List<Type> columnTypes)
         {
             Name = tableName;
             _columnNames = columnNames;
             _columnTypes = columnTypes;
-            _searchManager = searchManager;
         }
 
         //Only used when loading from disk
@@ -78,7 +69,6 @@ namespace In_Memory_Database.Classes
             _columnTypes = columnTypes;
             _columnNames = columnNames;
             _indexTables = indexTables;
-            _searchManager = ServiceProviderFactory.ServiceProvider.GetService<ISearchManager>();
 
             //Without this, after deserializing back, the state will not be exactly the same, as the default type will be set to dynamic.
             foreach (DataRow row in rows)
@@ -129,18 +119,11 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public void RemoveRow(SearchConditions conditions)
+        public void RemoveRow(List<DataRow> toBeRemovedrows)
         {
-            List<DataRow> toBeRemovedrows = _searchManager.Search(
-                ColumnNames,
-                Rows,
-                conditions,
-                IndexTables
-            );
-
             if (toBeRemovedrows.Count == 0)
             {
-                throw new ArgumentException("Couldn't find any row with that condition");
+                return;
             }
             foreach (var row in toBeRemovedrows)
             {
@@ -153,26 +136,10 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public List<DataRow> Get(SearchConditions conditions, bool useIndex = true)
-        {
-            return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables, useIndex);
-        }
-
         public void ClearTable()
         {
             _rows.Clear();
         }
-
-        public void SaveToDisk(string dir) => FileManager.SaveToDisk(this, dir);
-
-        public void LoadFromDisk(string dir)
-        {
-            FileManager.LoadFromDisk(dir);
-        }
-
-        public void StartTransaction() { }
-
-        public void CommitTransaction() { }
 
         public void CreateIndex(string targetColumn)
         {
@@ -193,7 +160,10 @@ namespace In_Memory_Database.Classes
             }
         }
 
-        public void RemoveIndex() { }
+        public void DeleteIndex(string targetColumn)
+        {
+            _indexTables.Remove(targetColumn);
+        }
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
         {

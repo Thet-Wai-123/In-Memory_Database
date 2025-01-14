@@ -21,7 +21,7 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var searchManagerMock = new Mock<ISearchManager>();
-            var table = new DataTable("AgeTable", ["Age"], [typeof(int)], searchManagerMock.Object);
+            var table = new DataTable("AgeTable", ["Age"], [typeof(int)]);
             var row1 = new DataRow { 20 };
             var row2 = new DataRow { 21 };
             var row3 = new DataRow { 22 };
@@ -39,7 +39,14 @@ namespace In_Memory_Database_Testing
                 .Returns([row1, row2]);
 
             //Act
-            table.RemoveRow(conditions);
+            var rowToRemove = searchManagerMock.Object.Search(
+                table.ColumnNames,
+                table.Rows,
+                conditions,
+                table.IndexTables,
+                true
+            );
+            table.RemoveRow(rowToRemove);
 
             //Assert
             Assert.Equal("1x2", table.Size);

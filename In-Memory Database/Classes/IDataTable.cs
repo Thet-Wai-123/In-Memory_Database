@@ -16,21 +16,9 @@ namespace In_Memory_Database.Classes
         public void AddColumn(string name, Type type);
         public void RemoveColumn(string name);
         public void AddRow(DataRow row);
-        public void RemoveRow(SearchConditions conditions);
-
-        public List<DataRow> Get(SearchConditions conditions, bool useIndex = true);
-
+        public void RemoveRow(List<DataRow> row);
         public void ClearTable();
-
-        public void SaveToDisk(string dir) => FileManager.SaveToDisk(this, dir);
-
-        public void LoadFromDisk(string dir);
-
-        public void StartTransaction();
-
-        public void CommitTransaction();
-
         public void CreateIndex(string targetColumn);
-        public void RemoveIndex();
+        public void DeleteIndex(string targetColumn);
     }
 }

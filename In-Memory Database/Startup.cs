@@ -1,4 +1,5 @@
 ﻿using In_Memory_Database.Classes;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace In_Memory_Database
 {
@@ -6,7 +7,8 @@ namespace In_Memory_Database
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<ISearchManager, SearchManager>();
+            services.TryAddSingleton<ISearchManager, SearchManager>();
+            services.TryAddSingleton<IFileManager, FileManager>();
         }
     }
 }
