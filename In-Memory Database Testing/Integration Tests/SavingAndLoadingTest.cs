@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using In_Memory_Database;
-using In_Memory_Database.Classes;
-using Microsoft.Extensions.DependencyInjection;
+﻿using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 
 namespace In_Memory_Database_Testing
 {
-    public class DatabaseTest
+    public class SavingAndLoadingTest
     {
         [Fact]
         public void SavingAndLoading_ExpectSameInfosBeforeChange()
@@ -17,10 +11,10 @@ namespace In_Memory_Database_Testing
             //Arrange
             var db = new Database(new SearchManager(), new FileManager());
             db.CreateTable("AgeTable", new List<string> { "Age" }, new List<Type> { typeof(int) });
-            db.AddRow("AgeTable", [20]);
-            db.AddRow("AgeTable", [21]);
-            db.AddRow("AgeTable", [22]);
-            db.AddRow("AgeTable", [23]);
+            db["AgeTable"].AddRow(new DataRow { 1 });
+            db["AgeTable"].AddRow(new DataRow { 2 });
+            db["AgeTable"].AddRow(new DataRow { 3 });
+            db["AgeTable"].AddRow(new DataRow { 4 });
 
             //Act
             db.SaveToDisk();
@@ -30,7 +24,7 @@ namespace In_Memory_Database_Testing
 
             //Assert
             Assert.True(File.Exists(db.storageLocation + "/AgeTable.json"));
-            Assert.Equal(4, db.GetTable("AgeTable").Rows.Count());
+            Assert.Equal(4, db["AgeTable"].Rows.Count());
         }
     }
 }

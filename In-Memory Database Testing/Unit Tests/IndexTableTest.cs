@@ -1,4 +1,4 @@
-﻿using In_Memory_Database.Classes;
+﻿using In_Memory_Database.Classes.Data;
 using Microsoft.CSharp.RuntimeBinder;
 using Xunit.Abstractions;
 

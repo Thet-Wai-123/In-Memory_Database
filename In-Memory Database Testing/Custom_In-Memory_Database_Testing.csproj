@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\In-Memory Database\In-Memory Database.csproj" />
+    <ProjectReference Include="..\In-Memory Database\Custom_In-Memory_Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>

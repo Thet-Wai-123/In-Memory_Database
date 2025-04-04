@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
-using In_Memory_Database.Classes;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 //dotnet build
@@ -23,7 +24,7 @@ namespace In_Memory_Database_Benchmark
 
         SearchManager searchManager = new();
 
-        DataTable tempTable = new("Temp", columnNames, types);
+        DataTable tempTable = new("Temp", columnNames, types, new SearchManager());
 
         DataRow? rowToFind;
 

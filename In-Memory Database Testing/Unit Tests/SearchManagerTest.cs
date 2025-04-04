@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Castle.Components.DictionaryAdapter;
-using In_Memory_Database.Classes;
+﻿using System.Collections.ObjectModel;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using Moq;
 
 namespace In_Memory_Database_Testing

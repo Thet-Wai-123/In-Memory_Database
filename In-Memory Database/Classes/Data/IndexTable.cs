@@ -4,7 +4,7 @@ using System.Xml.Linq;
 using CodeExMachina;
 using Newtonsoft.Json.Linq;
 
-namespace In_Memory_Database.Classes
+namespace In_Memory_Database.Classes.Data
 {
     public abstract class IndexTable
     {
@@ -38,7 +38,7 @@ namespace In_Memory_Database.Classes
             List<Node<T>> foundNodes = [];
             if (op == "==")
             {
-                var result = (btree.Get(pivotNode));
+                var result = btree.Get(pivotNode);
                 if (result != null)
                 {
                     foundNodes.Add(result);
@@ -48,7 +48,7 @@ namespace In_Memory_Database.Classes
             {
                 btree.AscendGreaterOrEqual(
                     pivotNode,
-                    (Node<T> n) =>
+                    (n) =>
                     {
                         foundNodes.Add(n);
                         return true;
@@ -59,7 +59,7 @@ namespace In_Memory_Database.Classes
             {
                 btree.DescendLessOrEqual(
                     pivotNode,
-                    (Node<T> n) =>
+                    (n) =>
                     {
                         foundNodes.Add(n);
                         return true;

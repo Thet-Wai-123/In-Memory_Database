@@ -1,6 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 
-namespace In_Memory_Database.Classes
+namespace In_Memory_Database.Classes.Data
 {
     public interface IDataTable
     {

@@ -1,13 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+﻿using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace In_Memory_Database.Classes
+namespace In_Memory_Database
 {
-    public class DatabaseServiceRegistrar
+    public static class DatabaseServiceRegistrar
     {
         public static void AddInMemoryDBService(
             IServiceCollection services,
-            ISearchManager searchManager = null,
-            IFileManager fileManager = null
+            ISearchManager? searchManager = null,
+            IFileManager? fileManager = null
         )
         {
             if (searchManager != null)

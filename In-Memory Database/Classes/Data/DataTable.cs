@@ -1,19 +1,22 @@
 ﻿using System.Collections.ObjectModel;
 using System.Reflection;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace In_Memory_Database.Classes
+namespace In_Memory_Database.Classes.Data
 {
     public class DataTable : DefaultContractResolver, IDataTable
     {
         public string Name { get; set; }
         private List<Type> _columnTypes = [];
+        private readonly ISearchManager _searchManager;
+        private List<string> _columnNames = [];
+
         public ReadOnlyCollection<Type> ColumnTypes
         {
             get { return _columnTypes.AsReadOnly(); }
         }
-        private List<string> _columnNames = [];
         public ReadOnlyCollection<string> ColumnNames
         {
             get { return _columnNames.AsReadOnly(); }
@@ -30,6 +33,9 @@ namespace In_Memory_Database.Classes
             get { return _indexTables.AsReadOnly(); }
         }
 
+        /// <summary>
+        /// columns x rows
+        /// </summary>
         public string Size
         {
             get { return Width + "x" + _rows.Count; }
@@ -43,16 +49,17 @@ namespace In_Memory_Database.Classes
             get { return _rows.Count; }
         }
 
-        public DataTable(string tableName)
-        {
-            Name = tableName;
-        }
-
-        public DataTable(string tableName, List<string> columnNames, List<Type> columnTypes)
+        public DataTable(
+            string tableName,
+            List<string> columnNames,
+            List<Type> columnTypes,
+            ISearchManager searchManager
+        )
         {
             Name = tableName;
             _columnNames = columnNames;
             _columnTypes = columnTypes;
+            _searchManager = searchManager;
         }
 
         //Only used when loading from disk
@@ -114,7 +121,7 @@ namespace In_Memory_Database.Classes
             _rows.Add(newRow);
             foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
             {
-                int position = _columnNames.FindIndex((string c) => pair.Key == c);
+                int position = _columnNames.FindIndex((c) => pair.Key == c);
                 pair.Value.Insert(position, newRow);
             }
         }
@@ -131,7 +138,7 @@ namespace In_Memory_Database.Classes
             }
             foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
             {
-                int position = _columnNames.FindIndex((string c) => pair.Key == c);
+                int position = _columnNames.FindIndex((c) => pair.Key == c);
                 pair.Value.Delete(position, toBeRemovedrows[0]);
             }
         }
@@ -163,6 +170,11 @@ namespace In_Memory_Database.Classes
         public void DeleteIndex(string targetColumn)
         {
             _indexTables.Remove(targetColumn);
+        }
+
+        public List<DataRow> Search(SearchConditions conditions)
+        {
+            return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
         }
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
