@@ -62,7 +62,7 @@ namespace In_Memory_Database.Classes.Data
             _searchManager = searchManager;
         }
 
-        //Only used when loading from disk
+        //Only used when loading from disk, otherwise rows will not be initialized correctly
         [JsonConstructor]
         public DataTable(
             string name,
@@ -75,7 +75,6 @@ namespace In_Memory_Database.Classes.Data
             Name = name;
             _columnTypes = columnTypes;
             _columnNames = columnNames;
-            _indexTables = indexTables;
 
             //Without this, after deserializing back, the state will not be exactly the same, as the default type will be set to dynamic.
             foreach (DataRow row in rows)
@@ -86,6 +85,7 @@ namespace In_Memory_Database.Classes.Data
                 }
             }
             _rows = rows;
+            _indexTables = indexTables;
         }
 
         public void AddColumn(string name, Type type)

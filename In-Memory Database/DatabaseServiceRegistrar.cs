@@ -9,7 +9,7 @@ namespace In_Memory_Database
         public static void AddInMemoryDBService(
             IServiceCollection services,
             ISearchManager? searchManager = null,
-            IFileManager? fileManager = null
+            IDiskManager? fileManager = null
         )
         {
             if (searchManager != null)

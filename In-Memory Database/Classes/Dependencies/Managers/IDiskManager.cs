@@ -2,9 +2,9 @@
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
-    public interface IFileManager
+    public interface IDiskManager
     {
         public void SaveTodisk(Database db, string dir);
-        public Dictionary<String, DataTable> LoadFromDisk(string dir);
+        public void LoadFromDisk(Database db, string dir);
     }
 }

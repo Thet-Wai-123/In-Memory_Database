@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
-    public class FileManager : IFileManager
+    public class DiskManager : IDiskManager
     {
         public void SaveTodisk(Database db, string dir)
         {
@@ -11,14 +11,14 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             {
                 string jsonString = JsonConvert.SerializeObject(table);
 
-                Directory.CreateDirectory(Path.GetDirectoryName(dir));
-                string path = $"{dir}{table.Name}.json";
+                Directory.CreateDirectory(dir);
+                string path = $"{dir}/{table.Name}.json";
 
                 File.WriteAllText(path, jsonString);
             }
         }
 
-        public Dictionary<String, DataTable> LoadFromDisk(string dir)
+        public void LoadFromDisk(Database db, string dir)
         {
             string[] tablesFoundInDir = Directory.GetFiles(dir);
             String[] tableNames = tablesFoundInDir
@@ -37,7 +37,16 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
                     i++;
                 }
             }
-            return tablesGenerated;
+
+            foreach (var table in tablesGenerated)
+            {
+                db.CreateTable(
+                    table.Key,
+                    new List<string>(table.Value.ColumnNames),
+                    new List<Type>(table.Value.ColumnTypes),
+                    new List<DataRow>(table.Value.Rows)
+                );
+            }
         }
     }
 }

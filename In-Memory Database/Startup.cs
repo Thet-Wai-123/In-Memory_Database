@@ -8,7 +8,7 @@ namespace In_Memory_Database
         public void ConfigureServices(IServiceCollection services)
         {
             services.TryAddSingleton<ISearchManager, SearchManager>();
-            services.TryAddSingleton<IFileManager, FileManager>();
+            services.TryAddSingleton<IDiskManager, DiskManager>();
         }
     }
 }
