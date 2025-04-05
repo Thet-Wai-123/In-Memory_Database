@@ -13,12 +13,26 @@ namespace In_Memory_Database.Classes.Data
         public readonly ISearchManager _searchManager;
         public readonly IDiskManager _diskManager;
 
-        private string diskLocation = "./storage";
+        private string _diskLocation;
+        private bool _saveOnDispose;
 
-        public Database(ISearchManager searchManager, IDiskManager diskManager)
+        public Database(
+            ISearchManager searchManager,
+            IDiskManager diskManager,
+            bool saveOnDispose = true,
+            string diskLocation = "./backup"
+        )
         {
             _searchManager = searchManager;
             _diskManager = diskManager;
+            _diskLocation = diskLocation;
+
+            if (saveOnDispose)
+            {
+                //Save on exit and unhandled exception
+                AppDomain.CurrentDomain.ProcessExit += (s, e) => SaveToDisk();
+                AppDomain.CurrentDomain.UnhandledException += (s, e) => SaveToDisk();
+            }
         }
 
         public void CreateTable(
@@ -49,12 +63,12 @@ namespace In_Memory_Database.Classes.Data
 
         public void SaveToDisk()
         {
-            _diskManager.SaveTodisk(this, diskLocation);
+            _diskManager.SaveTodisk(this, _diskLocation);
         }
 
         public void LoadFromDisk()
         {
-            _diskManager.LoadFromDisk(this, diskLocation);
+            _diskManager.LoadFromDisk(this, _diskLocation);
         }
 
         public void ClearDb()
@@ -64,7 +78,7 @@ namespace In_Memory_Database.Classes.Data
 
         public void SetDiskLocation(string location)
         {
-            diskLocation = location;
+            _diskLocation = location;
         }
     }
 }
