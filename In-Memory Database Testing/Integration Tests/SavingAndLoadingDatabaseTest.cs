@@ -19,19 +19,18 @@ namespace In_Memory_Database_Testing
             db["AgeTable"].AddRow(new DataRow { 4 });
 
             //Act
-            db.SetDiskLocation("backup2");
-            throw new Exception("Test exception to trigger save on exit");
-            //db.SaveToDisk();
+            db.SetDiskLocation("backup");
+            db.SaveToDisk();
 
-            //var newDb = new Database(new SearchManager(), new DiskManager());
-            //newDb.SetDiskLocation("backup");
-            //newDb.LoadFromDisk();
-            //var newDbSearch = newDb["AgeTable"].Search(new SearchConditions("Age", "==", 1));
+            var newDb = new Database(new SearchManager(), new DiskManager());
+            newDb.SetDiskLocation("backup");
+            newDb.LoadFromDisk();
+            var newDbSearch = newDb["AgeTable"].Search(new SearchConditions("Age", "==", 1));
 
-            ////Assert
-            //Assert.True(File.Exists("backup/AgeTable.json"));
-            //Assert.Equal(4, newDb["AgeTable"].Rows.Count());
-            //Assert.NotNull(newDbSearch);
+            //Assert
+            Assert.True(File.Exists("backup/AgeTable.json"));
+            Assert.Equal(4, newDb["AgeTable"].Rows.Count());
+            Assert.NotNull(newDbSearch);
         }
     }
 }

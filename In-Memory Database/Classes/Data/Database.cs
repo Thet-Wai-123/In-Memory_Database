@@ -10,11 +10,10 @@ namespace In_Memory_Database.Classes.Data
         {
             get { return _tables.AsReadOnly(); }
         }
-        public readonly ISearchManager _searchManager;
-        public readonly IDiskManager _diskManager;
+        private readonly ISearchManager _searchManager;
+        private readonly IDiskManager _diskManager;
 
         private string _diskLocation;
-        private bool _saveOnDispose;
 
         public Database(
             ISearchManager searchManager,
