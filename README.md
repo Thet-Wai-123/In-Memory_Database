@@ -25,7 +25,7 @@ You can register the in-memory database service in your application by adding `D
 
 or
 
-You can implement your own custom IFileManager and ISearchManager; otherwise, it'll register the implemention in this project into the service collection.
+You can implement your own custom IFileManager and ISearchManager and either pass it along as parameters as below. Or if an instance is already registered in the DI container, it will be used. 
 `DatabaseServiceRegistrar.AddInMemoryDBService(IServiceCollection services,ISearchManager searchManager,IFileManager fileManager);`
 
 ### 2. Manually creating a Database Instance
