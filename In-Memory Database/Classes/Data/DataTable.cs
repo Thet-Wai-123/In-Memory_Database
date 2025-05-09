@@ -10,7 +10,7 @@ namespace In_Memory_Database.Classes.Data
     {
         public string Name { get; set; }
         private List<Type> _columnTypes = [];
-        private readonly ISearchManager _searchManager;
+        private ISearchManager _searchManager;
         private List<string> _columnNames = [];
 
         public ReadOnlyCollection<Type> ColumnTypes
@@ -69,7 +69,7 @@ namespace In_Memory_Database.Classes.Data
             List<Type> columnTypes,
             List<string> columnNames,
             List<DataRow> rows,
-            Dictionary<string, IndexTable> indexTables
+            Dictionary<String, object> indexTables
         )
         {
             Name = name;
@@ -85,7 +85,10 @@ namespace In_Memory_Database.Classes.Data
                 }
             }
             _rows = rows;
-            _indexTables = indexTables;
+            foreach (string table in indexTables.Keys)
+            {
+                CreateIndex(table);
+            }
         }
 
         public void AddColumn(string name, Type type)
@@ -175,6 +178,11 @@ namespace In_Memory_Database.Classes.Data
         public List<DataRow> Search(SearchConditions conditions)
         {
             return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
+        }
+
+        public void SetSearchManager(ISearchManager searchManager)
+        {
+            _searchManager = searchManager;
         }
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)

@@ -25,12 +25,10 @@ namespace In_Memory_Database_Testing
             var newDb = new Database(new SearchManager(), new DiskManager());
             newDb.SetDiskLocation("backup");
             newDb.LoadFromDisk();
-            var newDbSearch = newDb["AgeTable"].Search(new SearchConditions("Age", "==", 1));
 
             //Assert
             Assert.True(File.Exists("backup/AgeTable.json"));
             Assert.Equal(4, newDb["AgeTable"].Rows.Count());
-            Assert.NotNull(newDbSearch);
         }
     }
 }

@@ -37,16 +37,17 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
                     i++;
                 }
             }
+            db.CopyTables(tablesGenerated);
 
-            foreach (var table in tablesGenerated)
-            {
-                db.CreateTable(
-                    table.Key,
-                    new List<string>(table.Value.ColumnNames),
-                    new List<Type>(table.Value.ColumnTypes),
-                    new List<DataRow>(table.Value.Rows)
-                );
-            }
+            //foreach (var table in tablesGenerated)
+            //{
+            //    db.CreateTable(
+            //        table.Key,
+            //        new List<string>(table.Value.ColumnNames),
+            //        new List<Type>(table.Value.ColumnTypes),
+            //        new List<DataRow>(table.Value.Rows)
+            //    );
+            //}
         }
     }
 }

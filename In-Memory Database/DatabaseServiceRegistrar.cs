@@ -10,16 +10,16 @@ namespace In_Memory_Database
         public static void AddInMemoryDBService(
             IServiceCollection services,
             ISearchManager? searchManager = null,
-            IDiskManager? fileManager = null
+            IDiskManager? diskManager = null
         )
         {
             if (searchManager != null)
             {
                 services.TryAddSingleton(searchManager);
             }
-            if (fileManager != null)
+            if (diskManager != null)
             {
-                services.TryAddSingleton(fileManager);
+                services.TryAddSingleton(diskManager);
             }
             var startup = new Startup();
             startup.ConfigureServices(services);

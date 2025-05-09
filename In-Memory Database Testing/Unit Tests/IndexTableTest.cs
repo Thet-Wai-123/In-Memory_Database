@@ -67,6 +67,7 @@ namespace In_Memory_Database_Testing
             Assert.Equal([row3], result);
         }
 
+        //The index search will return all the values that matches and not just 1
         [Fact]
         public void HandlingDuplicateValues()
         {

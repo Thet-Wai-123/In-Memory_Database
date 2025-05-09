@@ -55,6 +55,15 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
+        public void CopyTables(Dictionary<string, DataTable> tables)
+        {
+            _tables = tables;
+            foreach (var table in _tables.Values)
+            {
+                table.SetSearchManager(_searchManager);
+            }
+        }
+
         public DataTable this[string tableName] =>
             Tables.TryGetValue(tableName, out DataTable table)
                 ? table
