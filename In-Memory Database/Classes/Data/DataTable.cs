@@ -95,14 +95,28 @@ namespace In_Memory_Database.Classes.Data
         {
             _columnTypes.Add(type);
             _columnNames.Add(name);
+            foreach (var row in _rows)
+            {
+                row.Append(null);
+            }
         }
 
         public void RemoveColumn(string name)
         {
-            if (_columnNames.Remove(name) == false)
+            int index = _columnNames.IndexOf(name);
+            if (index == -1)
             {
                 throw new ArgumentException("Column doesn't exist");
             }
+
+            _columnNames.RemoveAt(index);
+            _columnTypes.RemoveAt(index);
+
+            foreach (var row in _rows)
+            {
+                row.RemoveAt(index);
+            }
+
             _indexTables.Remove(name);
         }
 

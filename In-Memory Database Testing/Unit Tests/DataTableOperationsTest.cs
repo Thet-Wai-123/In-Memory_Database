@@ -58,5 +58,26 @@ namespace In_Memory_Database_Testing
             //Assert
             Assert.Equal(new List<DataRow> { row2 }, searchResult);
         }
+
+        [Fact]
+        public void TableAddAndRemoveColumn_ExpectTheRowsToMatch()
+        {
+            //Arrange
+            var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
+            var row1 = new DataRow { 1 };
+            var row2 = new DataRow { 2 };
+            var row3 = new DataRow { 3 };
+            var row4 = new DataRow { 4 };
+            table.AddRow(row1);
+            table.AddRow(row2);
+            table.AddRow(row3);
+            table.AddRow(row4);
+
+            //Act & Assert
+            table.AddColumn("Score", typeof(int));
+            Assert.Equal(2, table.Width);
+            table.RemoveColumn("Age");
+            Assert.Equal(1, table.Width);
+        }
     }
 }
