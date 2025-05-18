@@ -34,7 +34,7 @@ See [Reference Page](API.md) for documentation
 
 ## Future Plans
 
-- Concurreny using locks
+- Concurreny
 - Exception handling for when a transaction fails
 - More complex queries and reference keys
 
