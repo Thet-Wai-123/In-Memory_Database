@@ -1,11 +1,11 @@
-﻿using System;
+﻿using In_Memory_Database.Classes.Data;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using In_Memory_Database.Classes.Data;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
@@ -18,10 +18,6 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
 
         public Transaction Begin()
         {
-            if (_currentTransaction.Value != null)
-            {
-                throw new InvalidOperationException("Already has an ongoing transaction");
-            }
             Transaction newTransaction;
             lock (_nextIdLock)
             {

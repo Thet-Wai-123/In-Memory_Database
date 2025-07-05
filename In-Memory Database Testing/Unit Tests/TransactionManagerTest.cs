@@ -1,10 +1,10 @@
-﻿using System;
+﻿using In_Memory_Database.Classes.Dependencies.Managers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading.Tasks;
-using In_Memory_Database.Classes.Dependencies.Managers;
 using Xunit.Abstractions;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -12,7 +12,7 @@ namespace In_Memory_Database_Testing.Unit_Tests
 {
     public class TransactionManagerTest
     {
-        //For debugging, delete later
+        //For printing out messages
         private readonly ITestOutputHelper _testOutputHelper;
 
         public TransactionManagerTest(ITestOutputHelper testOutputHelper)
@@ -20,10 +20,41 @@ namespace In_Memory_Database_Testing.Unit_Tests
             _testOutputHelper = testOutputHelper;
         }
 
-        //end of debugging
+        [Fact]
+        public async Task UniqueTransactionInOriginalAndNewTask_ExpectsToBeSameTransaction()
+        {
+            //Arrange
+            //Happening in original thread
+            var tm = new TransactionManager();
+            tm.Begin();
+            var curTransactionStart = TransactionManager.GetCurrentTransaction();
+            _testOutputHelper.WriteLine(
+                $"Task 1 Transaction Xmin at start: {curTransactionStart.Xmin}"
+            );
+
+            //There is another concurrent session going on in another thread
+            await Task.Run(() =>
+            {
+                var tm2 = new TransactionManager();
+                tm2.Begin();
+                var curTransaction2 = TransactionManager.GetCurrentTransaction();
+                _testOutputHelper.WriteLine(
+                    $"Task 2 Transaction Xmin at start: {curTransaction2.Xmin}"
+                );
+            });
+
+            //Act
+            var curTransactionEnd = TransactionManager.GetCurrentTransaction();
+            _testOutputHelper.WriteLine(
+                $"Task 1 Transaction Xmin at end: {curTransactionEnd.Xmin}"
+            );
+
+            //Assert
+            Assert.Equal(curTransactionStart, curTransactionEnd);
+        }
 
         [Fact]
-        public async Task UniqueTransactionIdAssignedConcurrently_ExpectsToPersistForDifferentThreads()
+        public async Task UniqueTransactionInDifferentTasks_ExpectsToBeSameTransaction()
         {
             var task1 = Task.Run(async () =>
             {
@@ -32,11 +63,11 @@ namespace In_Memory_Database_Testing.Unit_Tests
                 var curTransaction1 = TransactionManager.GetCurrentTransaction();
                 _testOutputHelper.WriteLine($"Task 1 Transaction Xmin: {curTransaction1.Xmin}");
 
-                //works with async and waiting 1 sec for task 2 to run.
+                //waiting 1 sec for task 2 to run.
                 var curTransaction2 = TransactionManager.GetCurrentTransaction();
                 await Task.Delay(1000);
                 _testOutputHelper.WriteLine(
-                    $"Task 1 Transaction Xmin after waiting: {curTransaction2.Xmin}"
+                    $"Task 1 Transaction Xmin at end: {curTransaction2.Xmin}"
                 );
                 Assert.Equal(curTransaction1, curTransaction2);
             });
