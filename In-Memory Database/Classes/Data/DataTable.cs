@@ -1,52 +1,72 @@
-﻿using System.Collections.ObjectModel;
-using System.Reflection;
-using In_Memory_Database.Classes.Dependencies.Managers;
+﻿using In_Memory_Database.Classes.Dependencies.Managers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Collections.ObjectModel;
+using System.Reflection;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable : DefaultContractResolver, IDataTable
+    public class DataTable :DefaultContractResolver, IDataTable
     {
-        public string Name { get; set; }
+        public string Name
+        {
+            get; set;
+        }
         private List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
         private List<string> _columnNames = [];
+        private static readonly object tableOperationsLock = new();
 
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get { return _columnTypes.AsReadOnly(); }
+            get
+            {
+                return _columnTypes.AsReadOnly();
+            }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get { return _columnNames.AsReadOnly(); }
+            get
+            {
+                return _columnNames.AsReadOnly();
+            }
         }
         private List<DataRow> _rows = [];
-
         public ReadOnlyCollection<DataRow> Rows
         {
-            get { return _rows.AsReadOnly(); }
+            get
+            {
+                return _rows.AsReadOnly();
+            }
         }
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get { return _indexTables.AsReadOnly(); }
+            get
+            {
+                return _indexTables.AsReadOnly();
+            }
         }
-
-        /// <summary>
-        /// columns x rows
-        /// </summary>
         public string Size
         {
-            get { return Width + "x" + _rows.Count; }
+            get
+            {
+                return Width + "x" + _rows.Count;
+            }
         }
         public int Width
         {
-            get { return _columnTypes.Count; }
+            get
+            {
+                return _columnTypes.Count;
+            }
         }
         public int Height
         {
-            get { return _rows.Count; }
+            get
+            {
+                return _rows.Count;
+            }
         }
 
         public DataTable(
@@ -93,100 +113,128 @@ namespace In_Memory_Database.Classes.Data
 
         public void AddColumn(string name, Type type)
         {
-            _columnTypes.Add(type);
-            _columnNames.Add(name);
-            foreach (var row in _rows)
+            lock (tableOperationsLock)
             {
-                row.Append(null);
+                _columnTypes.Add(type);
+                _columnNames.Add(name);
+                foreach (var row in _rows)
+                {
+                    lock (tableOperationsLock)
+                    {
+                        row.Append(null);
+                    }
+                }
             }
         }
 
         public void RemoveColumn(string name)
         {
-            int index = _columnNames.IndexOf(name);
-            if (index == -1)
+            lock (tableOperationsLock)
             {
-                throw new ArgumentException("Column doesn't exist");
+                int index = _columnNames.IndexOf(name);
+                if (index == -1)
+                {
+                    throw new ArgumentException("Column doesn't exist");
+                }
+
+                _columnNames.RemoveAt(index);
+                _columnTypes.RemoveAt(index);
+
+                foreach (var row in _rows)
+                {
+                    row.RemoveAt(index);
+                }
+
+                _indexTables.Remove(name);
             }
-
-            _columnNames.RemoveAt(index);
-            _columnTypes.RemoveAt(index);
-
-            foreach (var row in _rows)
-            {
-                row.RemoveAt(index);
-            }
-
-            _indexTables.Remove(name);
         }
 
         public void AddRow(DataRow newRow)
         {
-            if (newRow.Count != Width)
+            lock (tableOperationsLock)
             {
-                throw new ArgumentException("Input doesn't match the table column's length");
-            }
-            //use a loop here to check beforehand if all the types match first
-            for (int i = 0; i < Width; i++)
-            {
-                if (newRow[i].GetType() != _columnTypes[i])
+                if (newRow.Count != Width)
                 {
-                    throw new ArgumentException("Input doesn't match the table column's type");
+                    throw new ArgumentException("Input doesn't match the table column's length");
                 }
-            }
-            //add the row to current table and also index table
-            _rows.Add(newRow);
-            foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
-            {
-                int position = _columnNames.FindIndex((c) => pair.Key == c);
-                pair.Value.Insert(position, newRow);
+                //use a loop here to check beforehand if all the types match first
+                for (int i = 0; i < Width; i++)
+                {
+                    if (newRow[i].GetType() != _columnTypes[i])
+                    {
+                        throw new ArgumentException("Input doesn't match the table column's type");
+                    }
+                }
+                //add the row to current table and also index table
+                _rows.Add(newRow);
+                foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
+                {
+                    int position = _columnNames.FindIndex((c) => pair.Key == c);
+                    pair.Value.Insert(position, newRow);
+                }
             }
         }
 
         public void RemoveRow(List<DataRow> toBeRemovedrows)
         {
-            if (toBeRemovedrows.Count == 0)
+            lock (tableOperationsLock)
             {
-                return;
+                if (toBeRemovedrows.Count == 0)
+                {
+                    return;
+                }
+                foreach (var row in toBeRemovedrows)
+                {
+                    _rows.Remove(row);
+                }
+                foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
+                {
+                    int position = _columnNames.FindIndex((c) => pair.Key == c);
+                    pair.Value.Delete(position, toBeRemovedrows[0]);
+                }
             }
-            foreach (var row in toBeRemovedrows)
-            {
-                _rows.Remove(row);
-            }
-            foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
-            {
-                int position = _columnNames.FindIndex((c) => pair.Key == c);
-                pair.Value.Delete(position, toBeRemovedrows[0]);
-            }
+        }
+
+        public void UpdateRow()
+        {
         }
 
         public void ClearTable()
         {
-            _rows.Clear();
+            lock (tableOperationsLock)
+            {
+                _rows.Clear();
+            }
         }
 
         public void CreateIndex(string targetColumn)
         {
-            for (int i = 0; i < Width; i++)
+            lock (tableOperationsLock)
             {
-                if (_columnNames[i] == targetColumn)
+                for (int i = 0; i < Width; i++)
                 {
-                    var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
-                        _columnTypes[i]
-                    );
-                    object indexTableInstance = Activator.CreateInstance(
-                        genericIndexTableType,
-                        i,
-                        _rows
-                    );
-                    _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                    if (_columnNames[i] == targetColumn)
+                    {
+                        var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
+                            _columnTypes[i]
+                        );
+                        object indexTableInstance = Activator.CreateInstance(
+                            genericIndexTableType,
+                            i,
+                            _rows
+                        );
+                        _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                    }
                 }
             }
         }
 
         public void DeleteIndex(string targetColumn)
         {
-            _indexTables.Remove(targetColumn);
+            lock (tableOperationsLock)
+            {
+                _indexTables.Remove(targetColumn);
+            }
         }
 
         public List<DataRow> Search(SearchConditions conditions)
@@ -201,15 +249,18 @@ namespace In_Memory_Database.Classes.Data
 
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
         {
-            var result = base.GetSerializableMembers(objectType);
-            if (objectType == typeof(IDataTable))
+            lock (tableOperationsLock)
             {
-                var memberInfo = objectType
-                    .GetMember("_myField", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Single();
-                result.Add(memberInfo);
+                var result = base.GetSerializableMembers(objectType);
+                if (objectType == typeof(IDataTable))
+                {
+                    var memberInfo = objectType
+                        .GetMember("_myField", BindingFlags.NonPublic | BindingFlags.Instance)
+                        .Single();
+                    result.Add(memberInfo);
+                }
+                return result;
             }
-            return result;
         }
     }
 }
