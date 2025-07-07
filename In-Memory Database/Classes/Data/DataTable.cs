@@ -207,6 +207,41 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
+        public void AddColumnAndCommit(string name, Type type)
+        {
+            TransactionManager.Begin();
+            AddColumn(name, type);
+            TransactionManager.Commit();
+        }
+
+        public void RemoveColumnAndCommit(string name)
+        {
+            TransactionManager.Begin();
+            RemoveColumn(name);
+            TransactionManager.Commit();
+        }
+
+        public void AddRowAndCommit(DataRow newRow)
+        {
+            TransactionManager.Begin();
+            AddRow(newRow);
+            TransactionManager.Commit();
+        }
+
+        public void RemoveRowAndCommit(List<DataRow> toBeRemovedrows)
+        {
+            TransactionManager.Begin();
+            RemoveRow(toBeRemovedrows);
+            TransactionManager.Commit();
+        }
+
+        public void ClearTableAndCommit()
+        {
+            TransactionManager.Begin();
+            ClearTable();
+            TransactionManager.Commit();
+        }
+
         public void CreateIndex(string targetColumn)
         {
             lock (tableOperationsLock)
