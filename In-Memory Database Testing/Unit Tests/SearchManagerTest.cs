@@ -15,7 +15,7 @@ namespace In_Memory_Database_Testing
             var searchManager = new SearchManager();
             var rows = new List<DataRow>();
             var mockTable = new Mock<IDataTable>();
-            mockTable.SetupGet(x => x.Rows).Returns(new ReadOnlyCollection<DataRow>(rows));
+            mockTable.SetupGet(x => x.Rows).Returns(rows.AsReadOnly());
             mockTable.SetupGet(x => x.ColumnNames).Returns(new ReadOnlyCollection<string>(["Age"]));
             mockTable
                 .SetupGet(x => x.IndexTables)

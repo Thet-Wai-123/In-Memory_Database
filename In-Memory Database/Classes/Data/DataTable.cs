@@ -1,72 +1,79 @@
-﻿using In_Memory_Database.Classes.Dependencies.Managers;
+﻿using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.Data;
+using System.Reflection;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System.Collections.ObjectModel;
-using System.Reflection;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable :DefaultContractResolver, IDataTable
+    public class DataTable : DefaultContractResolver, IDataTable
     {
-        public string Name
-        {
-            get; set;
-        }
+        public string Name { get; set; }
         private List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
         private List<string> _columnNames = [];
-        private static readonly object tableOperationsLock = new();
 
+        //this lock will be used to do any operation here, and then released immediately after its done. For ongoing transaction, there will be another shared lock from LockManager
+        private static readonly object tableOperationsLock = new();
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get
-            {
-                return _columnTypes.AsReadOnly();
-            }
+            get { return _columnTypes.AsReadOnly(); }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get
-            {
-                return _columnNames.AsReadOnly();
-            }
+            get { return _columnNames.AsReadOnly(); }
         }
         private List<DataRow> _rows = [];
         public ReadOnlyCollection<DataRow> Rows
         {
             get
             {
-                return _rows.AsReadOnly();
+                lock (tableOperationsLock)
+                {
+                    List<DataRow> result = new();
+                    var curTransaction = TransactionManager.GetCurrentTransaction();
+                    var xid =
+                        curTransaction != null
+                            ? curTransaction.xid
+                            : TransactionManager.PeekTopId();
+                    foreach (var (datarow, version) in RowsVersions)
+                    {
+                        //(xmin is committed AND xmax is not committed) OR (xmin == xid < xmax)
+                        if (
+                            (
+                                TransactionManager.checkTransactionStatus(version.Xmin)
+                                && !TransactionManager.checkTransactionStatus(version.Xmax)
+                            ) || (xid == version.Xmin && xid < version.Xmax)
+                        )
+                        {
+                            result.Add(datarow);
+                        }
+                    }
+                    return result.AsReadOnly();
+                }
             }
         }
+        private Dictionary<DataRow, DataRowVersion> RowsVersions { get; init; }
+
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get
-            {
-                return _indexTables.AsReadOnly();
-            }
+            get { return _indexTables.AsReadOnly(); }
         }
         public string Size
         {
-            get
-            {
-                return Width + "x" + _rows.Count;
-            }
+            get { return Width + "x" + Height; }
         }
         public int Width
         {
-            get
-            {
-                return _columnTypes.Count;
-            }
+            get { return _columnTypes.Count; }
         }
         public int Height
         {
-            get
-            {
-                return _rows.Count;
-            }
+            get { return Rows.Count(); }
         }
 
         public DataTable(
@@ -80,6 +87,7 @@ namespace In_Memory_Database.Classes.Data
             _columnNames = columnNames;
             _columnTypes = columnTypes;
             _searchManager = searchManager;
+            RowsVersions = [];
         }
 
         //Only used when loading from disk, otherwise rows will not be initialized correctly
@@ -95,7 +103,7 @@ namespace In_Memory_Database.Classes.Data
             Name = name;
             _columnTypes = columnTypes;
             _columnNames = columnNames;
-
+            RowsVersions = [];
             //Without this, after deserializing back, the state will not be exactly the same, as the default type will be set to dynamic.
             foreach (DataRow row in rows)
             {
@@ -113,6 +121,10 @@ namespace In_Memory_Database.Classes.Data
 
         public void AddColumn(string name, Type type)
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
                 _columnTypes.Add(type);
@@ -125,10 +137,17 @@ namespace In_Memory_Database.Classes.Data
                     }
                 }
             }
+
+            if (!hasOnGoingTransaction)
+                TransactionManager.Commit();
         }
 
         public void RemoveColumn(string name)
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
                 int index = _columnNames.IndexOf(name);
@@ -147,10 +166,17 @@ namespace In_Memory_Database.Classes.Data
 
                 _indexTables.Remove(name);
             }
+
+            if (!hasOnGoingTransaction)
+                TransactionManager.Commit();
         }
 
         public void AddRow(DataRow newRow)
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
                 if (newRow.Count != Width)
@@ -172,31 +198,81 @@ namespace In_Memory_Database.Classes.Data
                     int position = _columnNames.FindIndex((c) => pair.Key == c);
                     pair.Value.Insert(position, newRow);
                 }
+                var xid = TransactionManager.GetCurrentTransaction().xid;
+                RowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
             }
+
+            if (!hasOnGoingTransaction)
+                TransactionManager.Commit();
         }
 
-        public void RemoveRow(List<DataRow> toBeRemovedrows)
+        public void RemoveRow(SearchConditions searchConditions)
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
+                var toBeRemovedrows = _searchManager.Search(
+                    ColumnNames,
+                    Rows,
+                    searchConditions,
+                    IndexTables,
+                    true
+                );
                 if (toBeRemovedrows.Count == 0)
                 {
                     return;
                 }
-                foreach (var row in toBeRemovedrows)
+                foreach (var removedRow in toBeRemovedrows)
                 {
-                    _rows.Remove(row);
+                    var xid = TransactionManager.GetCurrentTransaction().xid;
+                    RowsVersions[removedRow].Xmax = xid;
                 }
-                foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
-                {
-                    int position = _columnNames.FindIndex((c) => pair.Key == c);
-                    pair.Value.Delete(position, toBeRemovedrows[0]);
-                }
+
+                if (!hasOnGoingTransaction)
+                    TransactionManager.Commit();
             }
         }
 
-        public void UpdateRow()
+        public void UpdateRow(SearchConditions searchConditions, string column, dynamic newValue)
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+
+            lock (tableOperationsLock)
+            {
+                if (!_columnNames.Contains(column))
+                {
+                    return;
+                }
+                var columnIndex = _columnNames.FindIndex(x => x == column);
+                if (newValue.GetType() != ColumnTypes[columnIndex])
+                {
+                    throw new ArgumentException("Input doesn't match the table column's type");
+                }
+                var xid = TransactionManager.GetCurrentTransaction().xid;
+                var foundRows = this.Search(searchConditions);
+                foreach (DataRow oldRow in foundRows)
+                {
+                    RowsVersions[oldRow].Xmax = xid;
+
+                    DataRow newRow = new(oldRow);
+                    newRow[columnIndex] = newValue;
+                    _rows.Add(newRow);
+                    foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
+                    {
+                        int position = _columnNames.FindIndex((c) => pair.Key == c);
+                        pair.Value.Insert(position, newRow);
+                    }
+                    RowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
+                }
+            }
+
+            if (!hasOnGoingTransaction)
+                TransactionManager.Commit();
         }
 
         public void ClearTable()
@@ -205,41 +281,6 @@ namespace In_Memory_Database.Classes.Data
             {
                 _rows.Clear();
             }
-        }
-
-        public void AddColumnAndCommit(string name, Type type)
-        {
-            TransactionManager.Begin();
-            AddColumn(name, type);
-            TransactionManager.Commit();
-        }
-
-        public void RemoveColumnAndCommit(string name)
-        {
-            TransactionManager.Begin();
-            RemoveColumn(name);
-            TransactionManager.Commit();
-        }
-
-        public void AddRowAndCommit(DataRow newRow)
-        {
-            TransactionManager.Begin();
-            AddRow(newRow);
-            TransactionManager.Commit();
-        }
-
-        public void RemoveRowAndCommit(List<DataRow> toBeRemovedrows)
-        {
-            TransactionManager.Begin();
-            RemoveRow(toBeRemovedrows);
-            TransactionManager.Commit();
-        }
-
-        public void ClearTableAndCommit()
-        {
-            TransactionManager.Begin();
-            ClearTable();
-            TransactionManager.Commit();
         }
 
         public void CreateIndex(string targetColumn)
@@ -272,7 +313,7 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public List<DataRow> Search(SearchConditions conditions)
+        public ReadOnlyCollection<DataRow> Search(SearchConditions conditions)
         {
             return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
         }

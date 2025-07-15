@@ -5,7 +5,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
 {
     public interface ISearchManager
     {
-        public List<DataRow> Search(
+        public ReadOnlyCollection<DataRow> Search(
             ReadOnlyCollection<string> columnNames,
             ReadOnlyCollection<DataRow> rows,
             SearchConditions conditions,

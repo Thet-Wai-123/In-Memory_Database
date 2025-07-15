@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -50,7 +51,7 @@ namespace In_Memory_Database_Benchmark
         }
 
         [Benchmark]
-        public List<DataRow> SearchStringWithoutIndex()
+        public ReadOnlyCollection<DataRow> SearchStringWithoutIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
             return searchManager.Search(
@@ -63,7 +64,7 @@ namespace In_Memory_Database_Benchmark
         }
 
         [Benchmark]
-        public List<DataRow> SearchStringWithIndex()
+        public ReadOnlyCollection<DataRow> SearchStringWithIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
             return searchManager.Search(

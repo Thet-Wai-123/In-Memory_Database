@@ -7,7 +7,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
     public class SearchManager : ISearchManager
     {
         //A general search and will automatically use search by index if it exists, otherwise sequential search
-        public List<DataRow> Search(
+        public ReadOnlyCollection<DataRow> Search(
             ReadOnlyCollection<string> columnNames,
             ReadOnlyCollection<DataRow> rows,
             SearchConditions conditions,
@@ -31,7 +31,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             }
             if (targetColumnIndex == -1)
             {
-                return [];
+                return new ReadOnlyCollection<DataRow>([]);
             }
 
             //It does exist, so search
@@ -47,7 +47,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             {
                 matchingRows = SequentialSearch(_rows, targetColumnIndex, conditions);
             }
-            return matchingRows;
+            return matchingRows.AsReadOnly();
         }
 
         private List<DataRow> IndexSearch(IndexTable indexTable, SearchConditions conditions)

@@ -1,37 +1,46 @@
-﻿using In_Memory_Database.Classes.Data;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using In_Memory_Database.Classes.Data;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
     public class TransactionManager
     {
         private static long _nextId = 1;
-        private static readonly object _nextIdLock = new();
-        private static AsyncLocal<Transaction> _currentTransaction = new();
-        private static ConcurrentDictionary<long, Transaction> _allTransactionsStatus = new();
+        private static readonly object _nextTransactionIdLock = new();
+        private static readonly AsyncLocal<Transaction?> _currentTransaction = new();
+        private static readonly ConcurrentDictionary<long, Transaction> _allTransactionsStatus =
+            new();
 
-        public Transaction Begin()
+        internal static void Begin()
         {
+            if (_currentTransaction.Value != null)
+            {
+                throw new InvalidOperationException("Already ongoing transaction");
+            }
             Transaction newTransaction;
-            lock (_nextIdLock)
+            lock (_nextTransactionIdLock)
             {
                 newTransaction = new Transaction(_nextId);
                 _currentTransaction.Value = newTransaction;
                 _nextId++;
             }
-            _allTransactionsStatus.TryAdd(newTransaction.Xmin, newTransaction);
-            return newTransaction;
+            _allTransactionsStatus.TryAdd(newTransaction.xid, newTransaction);
         }
 
-        public void Commit()
+        internal static long PeekTopId()
         {
-            if (_currentTransaction.Value != null)
+            return _nextId;
+        }
+
+        internal static void Commit()
+        {
+            if (_currentTransaction.Value == null)
             {
                 throw new InvalidOperationException("No active transaction");
             }
@@ -39,24 +48,37 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             var curTransaction = _currentTransaction.Value;
             curTransaction.IsCommitted = true;
             _currentTransaction.Value = null;
+
+            LockManager.Release(curTransaction.xid);
         }
 
-        //For now, when rolling back, we'll just remove it permantely for now, which helps save a lot of space, and easier
-        public void RollBack()
+        internal static void RollBack()
         {
-            if (_currentTransaction == null)
+            if (_currentTransaction.Value == null)
             {
                 throw new InvalidOperationException("No active transaction");
             }
             var curTransaction = _currentTransaction.Value;
-            _allTransactionsStatus.TryRemove(curTransaction.Xmin, out _);
+            _allTransactionsStatus.TryRemove(curTransaction.xid, out _);
             _currentTransaction.Value = null;
+
+            LockManager.Release(curTransaction.xid);
         }
 
-        //This is static because it'll get called from different isolated scopes, and the transaction it'll get will be different.
-        internal static Transaction GetCurrentTransaction()
+        //it'll get called from different isolated scopes, and the transaction it'll get will be different.
+        internal static Transaction? GetCurrentTransaction()
         {
             return _currentTransaction.Value;
+        }
+
+        internal static bool checkTransactionStatus(long xid)
+        {
+            if (_allTransactionsStatus.ContainsKey(xid))
+            {
+                return _allTransactionsStatus[xid].IsCommitted;
+            }
+            else
+                return false;
         }
     }
 }

@@ -1,15 +1,15 @@
-﻿using System;
+﻿using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
-namespace In_Memory_Database_Testing.Unit_Tests
+namespace In_Memory_Database_Testing
 {
     public class DataTableConcurrencyTest
     {

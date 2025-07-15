@@ -29,11 +29,10 @@ namespace In_Memory_Database_Testing.Integration_Tests
 
             //Create index on score
             db["Student"].CreateIndex("Score");
-            var studentsQuery = db["Student"].Search(new SearchConditions("Score", "<=", 90));
             var indexes = db["Student"].IndexTables;
 
             //removing all scores less than 90
-            db["Student"].RemoveRow(studentsQuery);
+            db["Student"].RemoveRow(new SearchConditions("Score", "<=", 90));
 
             //Assert
             Assert.Equal(1, indexes.Count);

@@ -8,14 +8,12 @@ namespace In_Memory_Database.Classes.Data
 {
     public class Transaction
     {
-        public long Xmin { get; set; }
-        public long? Xmax { get; set; }
+        public long xid { get; set; }
         public bool IsCommitted { get; set; }
 
-        public Transaction(long tid)
+        public Transaction(long xid)
         {
-            Xmin = tid;
-            Xmax = null;
+            this.xid = xid;
             IsCommitted = false;
         }
     }
