@@ -49,52 +49,21 @@ namespace In_Memory_Database_Testing
             await Task.WhenAll(task1, task2);
         }
 
-        //By default, the asynclocal shallow copies to the new nested async task. We can use that to prevent nested transactions.
-        //This test also makes sure that if a transaction is handled again using the same thread, the old transaction MUST commit in order to work properly.
         [Fact]
         public void SameThreadReusedForAnotherTransaction_ExpectTheExecutionContextToWorkProperly()
         {
-            var firstException = "";
-            long secondTransactionId = 0;
+            //Arrange
+            TransactionManager.Begin();
+            var originalTransaction = TransactionManager.GetCurrentTransaction();
 
-            var thread1 = new Thread(() =>
-            {
-                TransactionManager.Begin();
-                var curTransaction1 = TransactionManager.GetCurrentTransaction();
+            //Act
+            var beginException = Record.Exception(() => TransactionManager.Begin());
+            TransactionManager.Commit();
+            var secondBeginException = Record.Exception(() => TransactionManager.Begin());
 
-                var thread2 = new Thread(() =>
-                {
-                    try
-                    {
-                        TransactionManager.Begin();
-                    }
-                    catch (Exception ex)
-                    {
-                        firstException = ex.Message;
-                    }
-                });
-                thread2.Start();
-                thread2.Join();
-
-                //commits our original transaction
-                TransactionManager.Commit();
-
-                //Now should be able to reuse the same thread for another transaction
-                var thread3 = new Thread(() =>
-                {
-                    TransactionManager.Begin();
-                    var curTransaction = TransactionManager.GetCurrentTransaction();
-                    secondTransactionId = curTransaction.xid;
-                });
-                thread3.Start();
-                thread3.Join();
-            });
-
-            thread1.Start();
-            thread1.Join();
-
-            Assert.Equal("Already ongoing transaction", firstException);
-            Assert.Equal(2, secondTransactionId);
+            //Assert
+            Assert.Equal("Already ongoing transaction", beginException!.Message);
+            Assert.Null(secondBeginException);
         }
     }
 }

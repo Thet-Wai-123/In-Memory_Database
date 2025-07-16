@@ -2,8 +2,8 @@
 
 ### `Database(searchManager, diskManager, saveOnDispose, diskLocation)` - Constructor
 
-| Name                    | Type           | Description                      |
-| ----------------------- | -------------- | -------------------------------- |
+| Name                    | Type             | Description                      |
+| ----------------------- | ---------------- | -------------------------------- |
 | searchManager           | `ISearchManager` | Implementation of ISearchManager |
 | diskManager             | `IDiskManager`   | Implementation of IDiskManager   |
 | saveOnDispose(Optional) | `bool`           | If it should save when closing   |
@@ -15,25 +15,36 @@ Returns all tables in the database as a read-only dictionary.
 
 ### `CreateTable(tableName, columnNames, columnTypes, rows)` - Method
 
-| Name             | Type            | Description                                             |
-| ---------------- | --------------- | ------------------------------------------------------- |
-| tableName     | `string`        | Name of the new table.                                  |
+| Name           | Type            | Description                                             |
+| -------------- | --------------- | ------------------------------------------------------- |
+| tableName      | `string`        | Name of the new table.                                  |
 | columnNames    | `List<string>`  | List of column names names.                             |
 | columnTypes    | `List<Type>`    | List of column types corresponding to the column names. |
 | rows(Optional) | `List<DataRow>` | List of initial rows to insert into the table.          |
 
-### `this[string tableName]` - Indexer 
+### `this[string tableName]` - Indexer
+
 Access table by name
 
-| Name        | Type                   | Description                                     |
-| ----------- | ---------------------- | ----------------------------------------------- |
-| tableName | `string`               | The name of the table to access.              |
+| Name      | Type     | Description                      |
+| --------- | -------- | -------------------------------- |
+| tableName | `string` | The name of the table to access. |
+
+### `Begin()` - Method
+
+Starts an explicit transaction, will not commit until commit.
+
+### `Commit()` - Method
+
+Commit on-going transaction.
+
+### `Abort()` - Method
+
+Abort and revert the current transaction.
 
 ### `SaveToDisk()` - Method
 
 Manual call to save to disk
-
-
 
 ### `LoadFromDisk()` - Method
 
@@ -47,90 +58,94 @@ Clears tables in memory
 
 Manually change where to save in
 
-| Name       | Type     | Description                                           |
-| ---------- | -------- | ----------------------------------------------------- |
+| Name     | Type     | Description  |
+| -------- | -------- | ------------ |
 | location | `string` | New Location |
-  
 
-<br> 
-
-
+<br>
 
 # Datatable Class
 
-
 ### `DataTable(Name, columnNames, columnTypes, searchManager)` - Constructor
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| Name           | `string`          | Table Name            |
-| columnNames    | `List<string>`    | Columns names, must match with columnTypes            |
-| columnTypes    | `List<Type>`      | Types of columns            |
-| searchManager  | `ISearchManager`  | Implementation of ISearchManager            |
+| Name          | Type             | Description                                |
+| ------------- | ---------------- | ------------------------------------------ |
+| Name          | `string`         | Table Name                                 |
+| columnNames   | `List<string>`   | Columns names, must match with columnTypes |
+| columnTypes   | `List<Type>`     | Types of columns                           |
+| searchManager | `ISearchManager` | Implementation of ISearchManager           |
 
 ### `AddColumn(name, type)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| name           | `string`          | column name         |
-| type           | `Type`            | column type         |
+| Name | Type     | Description |
+| ---- | -------- | ----------- |
+| name | `string` | column name |
+| type | `Type`   | column type |
 
 ### `RemoveColumn(name)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| name           | `string`          | column name         |
+| Name | Type     | Description |
+| ---- | -------- | ----------- |
+| name | `string` | column name |
 
 ### `AddRow(newRow)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| newRow         | `DataRow`         | row to add          |
+| Name   | Type      | Description |
+| ------ | --------- | ----------- |
+| newRow | `DataRow` | row to add  |
+
+### `UpdateRow(conditions, targetColumn, newValue)` - Method
+
+| Name         | Type               | Description                   |
+| ------------ | ------------------ | ----------------------------- |
+| conditions   | `SearchConditions` | conditions for rows to update |
+| targetColumn | `String`           | the column target to modify   |
+| newRow       | `Object`           | new value                     |
 
 ### `RemoveRow(toBeRemovedrows)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| toBeRemovedrows| `List<DataRow> `  | rows to remove, usually paired with Search      |
+| Name            | Type             | Description                                |
+| --------------- | ---------------- | ------------------------------------------ |
+| toBeRemovedrows | `List<DataRow> ` | rows to remove, usually paired with Search |
 
 ### `ClearTable()` - Method
 
-Delete all rows      
+Delete all rows
 
 ### `CreateIndex(targetColumn)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| targetColumn   | string          | key column to create index based on       |
+| Name         | Type   | Description                         |
+| ------------ | ------ | ----------------------------------- |
+| targetColumn | string | key column to create index based on |
 
 ### `DeleteIndex(targetColumn)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| targetColumn   | string          | target column       |
+| Name         | Type   | Description   |
+| ------------ | ------ | ------------- |
+| targetColumn | string | target column |
 
 ### `Search(conditions)` - Method
 
-| Name           | Type            | Description         |
-| -------------- | --------------- | ------------------- |
-| conditions     | SearchConditions| Implementation of SearchConditions(ColumnName, Op, Value)     |
+| Name       | Type             | Description                                               |
+| ---------- | ---------------- | --------------------------------------------------------- |
+| conditions | SearchConditions | Implementation of SearchConditions(ColumnName, Op, Value) |
 
 ### `Size` - Property
 
-Returns "columns x rows"   
+Returns "columns x rows"
 
 ### `Width` - Property
 
-Returns number of columns  
+Returns number of columns
 
 ### `Height` - Property
 
-Return number of rows      
+Return number of rows
 
 ### `ColumnNames` - Property
 
-Return a `ReadOnlyCollection<string>` of column names 
+Return a `ReadOnlyCollection<string>` of column names
 
 ### `ColumnTypes` - Property
 
-Return a `ReadOnlyCollection<Type>` of column types 
+Return a `ReadOnlyCollection<Type>` of column types

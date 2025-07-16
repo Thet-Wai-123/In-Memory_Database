@@ -2,11 +2,7 @@
 
 ## About
 
-This is a custom in-memory database built for learning purposes as part of a senior project, aiming to follow ACID architecture as closely as possible.
-
-For use cases, it could be used for for simple and inspectable database system in small-scale projects or testing purposes.
-
-It supports additional features such as B-tree indexing and data persistence to disk. Future improvements include support for concurrency and atomic transactions.
+This is a custom light-weight in-memory database built as part of a research project at Cal Poly Pomona. Basic functionalities include all CRUD operations. It also implements ACID architecture as closely as possible, inspired by PostgreSQL's implementations. It supports Multi-Version Control Concurrency with locks for atomicity and isolation, run-time type checking for consistency, and saving to disk on crash for durability. It also uses B-tree indexing to speed up query search.
 
 ## Installation
 
@@ -34,8 +30,7 @@ See [Reference Page](API.md) for documentation
 
 ## Future Plans
 
-- Concurreny
-- Exception handling for when a transaction fails
+- More complete exception handling
 - More complex queries and reference keys
 
 # Links
