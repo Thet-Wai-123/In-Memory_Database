@@ -101,5 +101,10 @@ namespace In_Memory_Database.Classes.Data
         {
             TransactionManager.Commit();
         }
+
+        public void Abort()
+        {
+            TransactionManager.RollBack();
+        }
     }
 }

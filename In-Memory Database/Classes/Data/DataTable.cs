@@ -1,30 +1,39 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
-using System.Data;
-using System.Reflection;
-using In_Memory_Database.Classes.Dependencies.Managers;
+﻿using In_Memory_Database.Classes.Dependencies.Managers;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.Data;
+using System.Reflection;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable : DefaultContractResolver, IDataTable
+    public class DataTable :DefaultContractResolver, IDataTable
     {
-        public string Name { get; set; }
+        public string Name
+        {
+            get; set;
+        }
         private List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
         private List<string> _columnNames = [];
 
         //this lock will be used to do any operation here, and then released immediately after its done. For ongoing transaction, there will be another shared lock from LockManager
-        private static readonly object tableOperationsLock = new();
+        private readonly object tableOperationsLock = new();
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get { return _columnTypes.AsReadOnly(); }
+            get
+            {
+                return _columnTypes.AsReadOnly();
+            }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get { return _columnNames.AsReadOnly(); }
+            get
+            {
+                return _columnNames.AsReadOnly();
+            }
         }
         private List<DataRow> _rows = [];
         public ReadOnlyCollection<DataRow> Rows
@@ -56,24 +65,39 @@ namespace In_Memory_Database.Classes.Data
                 }
             }
         }
-        private Dictionary<DataRow, DataRowVersion> RowsVersions { get; init; }
+        private Dictionary<DataRow, DataRowVersion> RowsVersions
+        {
+            get; init;
+        }
 
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get { return _indexTables.AsReadOnly(); }
+            get
+            {
+                return _indexTables.AsReadOnly();
+            }
         }
         public string Size
         {
-            get { return Width + "x" + Height; }
+            get
+            {
+                return Width + "x" + Height;
+            }
         }
         public int Width
         {
-            get { return _columnTypes.Count; }
+            get
+            {
+                return _columnTypes.Count;
+            }
         }
         public int Height
         {
-            get { return Rows.Count(); }
+            get
+            {
+                return Rows.Count();
+            }
         }
 
         public DataTable(
@@ -186,7 +210,11 @@ namespace In_Memory_Database.Classes.Data
                 //use a loop here to check beforehand if all the types match first
                 for (int i = 0; i < Width; i++)
                 {
-                    if (newRow[i].GetType() != _columnTypes[i])
+                    if (newRow[i] == null)
+                    {
+                        continue;
+                    }
+                    else if (newRow[i].GetType() != _columnTypes[i])
                     {
                         throw new ArgumentException("Input doesn't match the table column's type");
                     }

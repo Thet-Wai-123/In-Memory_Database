@@ -23,8 +23,6 @@ namespace In_Memory_Database_Testing
 
         //end of debugging
 
-
-        //Currently, the list cannot handle concurrency, only getting around 234 rows instead of 300
         [Fact]
         public void AddingMultipleRowsConcurrently_ExpectCorrectRowsCount()
         {
