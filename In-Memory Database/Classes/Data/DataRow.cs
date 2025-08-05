@@ -8,5 +8,12 @@
 
         public DataRow(DataRow copy)
             : base(copy) { }
+
+        private Guid _tid;
+        public Guid Tid
+        {
+            get => _tid;
+            init => _tid = new Guid();
+        }
     }
 }
