@@ -44,10 +44,9 @@ namespace In_Memory_Database.Classes.Data
             List<DataRow> rows = null
         )
         {
-            _tables.Add(
-                tableName,
-                new DataTable(tableName, columnNames, columnTypes, _searchManager)
-            );
+            var generatedTable = new DataTable(tableName, columnNames, columnTypes, _searchManager);
+            LockManager.SetUpLockForNewTable(generatedTable);
+            _tables.Add(tableName, generatedTable);
 
             if (rows != null)
             {

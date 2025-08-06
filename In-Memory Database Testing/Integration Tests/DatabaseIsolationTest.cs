@@ -18,7 +18,9 @@ namespace In_Memory_Database_Testing.Integration_Tests
             var db = new Database(new SearchManager(), new DiskManager());
             db.CreateTable("Student", new List<string> { "Id" }, new List<Type> { typeof(int) });
 
-            var commited = false;
+            var t1Started = new TaskCompletionSource<bool>();
+            var t1Commited = new TaskCompletionSource<bool>();
+            var t2ReadHeight = new TaskCompletionSource<bool>();
             var heightInTransaction1 = -1;
             var heightInTransaction2 = -1;
             var heightInTransaction2AfterCommit = -1;
@@ -27,25 +29,22 @@ namespace In_Memory_Database_Testing.Integration_Tests
             var transaction1 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].AddRow(new DataRow { 1 });
+                await db["Student"].AddRow(new DataRow { 1 });
                 heightInTransaction1 = db["Student"].Height;
-                await Task.Delay(1000);
+                t1Started.SetResult(true);
+                await t2ReadHeight.Task;
                 db.Commit();
-                commited = true;
+                t1Commited.SetResult(true);
             });
-
-            //Small delay to make t2 start shortly after t1
-            await Task.Delay(10);
 
             var transaction2 = Task.Run(async () =>
             {
+                await t1Started.Task;
                 db.Begin();
                 heightInTransaction2 = db["Student"].Height;
+                t2ReadHeight.SetResult(true);
 
-                while (!commited)
-                {
-                    await Task.Delay(10);
-                }
+                await t1Commited.Task;
                 heightInTransaction2AfterCommit = db["Student"].Height;
             });
 
@@ -63,18 +62,19 @@ namespace In_Memory_Database_Testing.Integration_Tests
             //Arrange
             var db = new Database(new SearchManager(), new DiskManager());
             db.CreateTable("Student", new List<string> { "Id" }, new List<Type> { typeof(int) });
+            var t1Started = new TaskCompletionSource<bool>();
 
             //Act
             var transaction1 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].AddRow(new DataRow { 1 });
+                await db["Student"].AddRow(new DataRow { 1 });
+                t1Started.SetResult(true);
                 //Don't commit, so it'll hold the row exclusive lock
             });
 
-            //Small delay to make t2 start shortly after t1
-            await Task.Delay(10);
-            db["Student"].Search(new SearchConditions("Id", "==", 1));
+            await t1Started.Task;
+            await db["Student"].Search(new SearchConditions("Id", "==", 1));
 
             //Assert
             Assert.True(true, "Finished the task in time meaning not blocked");
@@ -91,25 +91,27 @@ namespace In_Memory_Database_Testing.Integration_Tests
                 new List<Type> { typeof(int), typeof(String) }
             );
             var orderOfCompletion = new List<int>();
-            db["Student"].AddRow(new DataRow { 1, "John0" });
+            await db["Student"].AddRow(new DataRow { 1, "John0" });
+
+            var t1Started = new TaskCompletionSource<bool>();
+            var t2Started = new TaskCompletionSource<bool>();
 
             //Act
             var transaction1 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].UpdateRow(new SearchConditions("Id", "==", 1), "Name", "John1");
+                await db["Student"].UpdateRow(new SearchConditions("Id", "==", 1), "Name", "John1");
+                t1Started.SetResult(true);
                 await Task.Delay(1000);
                 db.Commit();
                 orderOfCompletion.Add(1);
             });
 
-            //Small delay to make t2 start shortly after t1
-            await Task.Delay(10);
-
             var transaction2 = Task.Run(async () =>
             {
+                await t1Started.Task;
                 db.Begin();
-                db["Student"].UpdateRow(new SearchConditions("Id", "==", 1), "Name", "John2");
+                await db["Student"].UpdateRow(new SearchConditions("Id", "==", 1), "Name", "John2");
                 db.Commit();
                 orderOfCompletion.Add(2);
             });
@@ -118,7 +120,8 @@ namespace In_Memory_Database_Testing.Integration_Tests
 
             //Assert
             Assert.Equal([1, 2], orderOfCompletion);
-            var result = db["Student"].Search(new SearchConditions("Id", "==", 1));
+            var result = await db["Student"].Search(new SearchConditions("Id", "==", 1));
+            Assert.Single(result);
             Assert.Equal([1, "John2"], result[0]);
         }
 
@@ -128,33 +131,40 @@ namespace In_Memory_Database_Testing.Integration_Tests
             //Arrange
             var db = new Database(new SearchManager(), new DiskManager());
             db.CreateTable("Student", new List<string> { "Id" }, new List<Type> { typeof(int) });
+
+            //Helpers to help with test
             var orderOfCompletion = new List<int>();
+            var t1Started = new TaskCompletionSource<bool>();
 
             //Act
-            //Below, t1 is delayed by 1 sec, but t2 and t3 waits. t2 and t3 should not block each other, so it doesn't matter what is faster. Only the first to complete matters.
+            //Exclusive Lock held, so this t1 will always finish first despite waiting.
             var transaction1 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].AddColumn("Name", typeof(String));
+                await db["Student"].AddColumn("Name", typeof(String));
+                t1Started.SetResult(true);
+
                 await Task.Delay(1000);
-                db.Commit();
+
                 orderOfCompletion.Add(1);
+                db.Commit();
             });
 
-            //Small delay to make t2 and t3 start shortly after t1
-            await Task.Delay(10);
+            await t1Started.Task;
 
+            //Read is blocked
             var transaction2 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].Search(new SearchConditions("Id", "==", 1));
+                await db["Student"].Search(new SearchConditions("Id", "==", 1));
                 orderOfCompletion.Add(2);
             });
 
+            //Write is blocked
             var transaction3 = Task.Run(async () =>
             {
                 db.Begin();
-                db["Student"].AddRow(new DataRow { 1, "John" });
+                await db["Student"].AddRow(new DataRow { 1, "John" });
                 orderOfCompletion.Add(3);
             });
 

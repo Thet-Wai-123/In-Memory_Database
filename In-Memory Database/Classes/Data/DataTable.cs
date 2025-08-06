@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace In_Memory_Database.Classes.Data
 {
@@ -143,12 +144,17 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public void AddColumn(string name, Type type)
+        public async Task AddColumn(string name, Type type)
         {
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
 
+            await LockManager.GetLock(
+                LockManager.LockType.AccessExclusiveLock,
+                this,
+                TransactionManager.GetCurrentTransaction().xid
+            );
             lock (tableOperationsLock)
             {
                 _columnTypes.Add(type);
@@ -166,12 +172,17 @@ namespace In_Memory_Database.Classes.Data
                 TransactionManager.Commit();
         }
 
-        public void RemoveColumn(string name)
+        public async Task RemoveColumn(string name)
         {
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
 
+            await LockManager.GetLock(
+                LockManager.LockType.AccessExclusiveLock,
+                this,
+                TransactionManager.GetCurrentTransaction().xid
+            );
             lock (tableOperationsLock)
             {
                 int index = _columnNames.IndexOf(name);
@@ -195,11 +206,27 @@ namespace In_Memory_Database.Classes.Data
                 TransactionManager.Commit();
         }
 
-        public void AddRow(DataRow newRow)
+        public async Task<ReadOnlyCollection<DataRow>> Search(SearchConditions conditions)
+        {
+            long xid = 0;
+            if (TransactionManager.GetCurrentTransaction() == null)
+                xid = TransactionManager.PeekTopId();
+            else
+                xid = TransactionManager.GetCurrentTransaction().xid;
+
+            await LockManager.GetLock(LockManager.LockType.AccessShareLock, this, xid);
+            return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
+        }
+
+        public async Task AddRow(DataRow newRow)
         {
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
+
+            var xid = TransactionManager.GetCurrentTransaction().xid;
+
+            await LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, newRow);
 
             lock (tableOperationsLock)
             {
@@ -226,7 +253,6 @@ namespace In_Memory_Database.Classes.Data
                     int position = _columnNames.FindIndex((c) => pair.Key == c);
                     pair.Value.Insert(position, newRow);
                 }
-                var xid = TransactionManager.GetCurrentTransaction().xid;
                 RowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
             }
 
@@ -234,28 +260,37 @@ namespace In_Memory_Database.Classes.Data
                 TransactionManager.Commit();
         }
 
-        public void RemoveRow(SearchConditions searchConditions)
+        public async Task RemoveRow(SearchConditions searchConditions)
         {
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
 
+            var xid = TransactionManager.GetCurrentTransaction().xid;
+
+            var toBeRemovedrows = _searchManager.Search(
+                ColumnNames,
+                Rows,
+                searchConditions,
+                IndexTables,
+                true
+            );
+            if (toBeRemovedrows.Count == 0)
+            {
+                return;
+            }
+            foreach (var removedRow in toBeRemovedrows)
+                await LockManager.GetLock(
+                    LockManager.LockType.RowExclusiveLock,
+                    this,
+                    xid,
+                    removedRow
+                );
+
             lock (tableOperationsLock)
             {
-                var toBeRemovedrows = _searchManager.Search(
-                    ColumnNames,
-                    Rows,
-                    searchConditions,
-                    IndexTables,
-                    true
-                );
-                if (toBeRemovedrows.Count == 0)
-                {
-                    return;
-                }
                 foreach (var removedRow in toBeRemovedrows)
                 {
-                    var xid = TransactionManager.GetCurrentTransaction().xid;
                     RowsVersions[removedRow].Xmax = xid;
                 }
 
@@ -264,25 +299,39 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public void UpdateRow(SearchConditions searchConditions, string column, dynamic newValue)
+        public async Task UpdateRow(
+            SearchConditions searchConditions,
+            string column,
+            dynamic newValue
+        )
         {
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
 
+            if (!_columnNames.Contains(column))
+            {
+                return;
+            }
+            var columnIndex = _columnNames.FindIndex(x => x == column);
+            if (newValue.GetType() != ColumnTypes[columnIndex])
+            {
+                throw new ArgumentException("Input doesn't match the table column's type");
+            }
+            var xid = TransactionManager.GetCurrentTransaction().xid;
+            var candidateRows = await this.Search(searchConditions);
+
+            var lockTasks = candidateRows.Select(row =>
+                LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, row)
+            );
+
+            await Task.WhenAll(lockTasks);
+
+            //Search again after locking to confirm that the condition still holds true
+            var foundRows = await this.Search(searchConditions);
+
             lock (tableOperationsLock)
             {
-                if (!_columnNames.Contains(column))
-                {
-                    return;
-                }
-                var columnIndex = _columnNames.FindIndex(x => x == column);
-                if (newValue.GetType() != ColumnTypes[columnIndex])
-                {
-                    throw new ArgumentException("Input doesn't match the table column's type");
-                }
-                var xid = TransactionManager.GetCurrentTransaction().xid;
-                var foundRows = this.Search(searchConditions);
                 foreach (DataRow oldRow in foundRows)
                 {
                     RowsVersions[oldRow].Xmax = xid;
@@ -303,12 +352,23 @@ namespace In_Memory_Database.Classes.Data
                 TransactionManager.Commit();
         }
 
-        public void ClearTable()
+        public async Task ClearTable()
         {
+            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+            if (!hasOnGoingTransaction)
+                TransactionManager.Begin();
+            await LockManager.GetLock(
+                LockManager.LockType.AccessExclusiveLock,
+                this,
+                TransactionManager.GetCurrentTransaction().xid
+            );
             lock (tableOperationsLock)
             {
                 _rows.Clear();
             }
+
+            if (!hasOnGoingTransaction)
+                TransactionManager.Commit();
         }
 
         public void CreateIndex(string targetColumn)
@@ -339,11 +399,6 @@ namespace In_Memory_Database.Classes.Data
             {
                 _indexTables.Remove(targetColumn);
             }
-        }
-
-        public ReadOnlyCollection<DataRow> Search(SearchConditions conditions)
-        {
-            return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
         }
 
         public void SetSearchManager(ISearchManager searchManager)
