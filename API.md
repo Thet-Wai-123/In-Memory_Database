@@ -32,11 +32,13 @@ Access table by name
 
 ### `Begin()` - Method
 
-Starts an explicit transaction, will not commit until commit.
+Starts an explicit transaction with assigned transaction id, that is tied with the async context. However, by default, if you call a CRUD method, affecting rows, it'll automatically and implicitly start new transaction and commit in one-line.
+
+Does not support recursive calls.
 
 ### `Commit()` - Method
 
-Commit on-going transaction.
+Commit on-going transaction. Throws exception if there is no on-going transactions.
 
 ### `Abort()` - Method
 
@@ -75,26 +77,26 @@ Manually change where to save in
 | columnTypes   | `List<Type>`     | Types of columns                           |
 | searchManager | `ISearchManager` | Implementation of ISearchManager           |
 
-### `AddColumn(name, type)` - Method
+### `AddColumn(name, type)` - Async Method
 
 | Name | Type     | Description |
 | ---- | -------- | ----------- |
 | name | `string` | column name |
 | type | `Type`   | column type |
 
-### `RemoveColumn(name)` - Method
+### `RemoveColumn(name)` - Async Method
 
 | Name | Type     | Description |
 | ---- | -------- | ----------- |
 | name | `string` | column name |
 
-### `AddRow(newRow)` - Method
+### `AddRow(newRow)` - Async Method
 
 | Name   | Type      | Description |
 | ------ | --------- | ----------- |
 | newRow | `DataRow` | row to add  |
 
-### `UpdateRow(conditions, targetColumn, newValue)` - Method
+### `UpdateRow(conditions, targetColumn, newValue)` - Async Method
 
 | Name         | Type               | Description                   |
 | ------------ | ------------------ | ----------------------------- |
@@ -102,33 +104,35 @@ Manually change where to save in
 | targetColumn | `String`           | the column target to modify   |
 | newRow       | `Object`           | new value                     |
 
-### `RemoveRow(toBeRemovedrows)` - Method
+### `RemoveRow(toBeRemovedrows)` - Async Method
 
 | Name            | Type             | Description                                |
 | --------------- | ---------------- | ------------------------------------------ |
 | toBeRemovedrows | `List<DataRow> ` | rows to remove, usually paired with Search |
 
-### `ClearTable()` - Method
+### `ClearTable()` - Async Method
 
 Delete all rows
 
-### `CreateIndex(targetColumn)` - Method
+### `CreateIndex(targetColumn)` - Async Method
 
 | Name         | Type   | Description                         |
 | ------------ | ------ | ----------------------------------- |
 | targetColumn | string | key column to create index based on |
 
-### `DeleteIndex(targetColumn)` - Method
+### `DeleteIndex(targetColumn)` - Async Method
 
 | Name         | Type   | Description   |
 | ------------ | ------ | ------------- |
 | targetColumn | string | target column |
 
-### `Search(conditions)` - Method
+### `Search(conditions)` - Async Method
 
 | Name       | Type             | Description                                               |
 | ---------- | ---------------- | --------------------------------------------------------- |
 | conditions | SearchConditions | Implementation of SearchConditions(ColumnName, Op, Value) |
+
+Returns Task<ReadOnlyCollection\<DataRow\>>
 
 ### `Size` - Property
 

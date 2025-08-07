@@ -2,7 +2,9 @@
 
 ## About
 
-This is a custom light-weight in-memory database built as part of a research project at Cal Poly Pomona. Basic functionalities include all CRUD operations. It also implements ACID architecture as closely as possible, inspired by PostgreSQL's implementations. It supports Multi-Version Control Concurrency with locks for atomicity and isolation, run-time type checking for consistency, and saving to disk on crash for durability. It also uses B-tree indexing to speed up query search.
+This is a light-weight, in-memory database built as part of a research project at Cal Poly Pomona. It can especially be useful for testing purposes where you want isolated databases with ease of set up, and simulate real database functions.
+
+Basic functionalities include all CRUD operations and aims to follow ACID architecture as closely as possible, inspired by PostgreSQL's implementations. It supports concurrency using Multi-Version Control Concurrency and async read write locks to simulate Read Commited isolation level. It can also perform type-checks, and save to disk on crash by default, and create a B-tree indexing to speed up query search.
 
 ## Installation
 
@@ -28,10 +30,11 @@ Since the database class is public and available, you can directly create a data
 
 See [Reference Page](API.md) for documentation
 
-## Future Plans
+## Limitations & Potential Plans
 
-- More complete exception handling
-- More complex queries and reference keys
+- Atomicity is only supported for changing rows but not datatable structure, meaning those changes will not rollback properly.
+- Only includes simple add and retrieve, and no foreign keys or custom constraints.
+- Search parameters are simple and only allow one search condition.
 
 # Links
 
@@ -40,4 +43,6 @@ Git Repo = https://github.com/Thet-Wai-123/In-Memory_Database
 
 # Acknowledgments
 
-This project uses the BTree library by CodeExMachina, licensed under GPLv3.0.
+BTree library by CodeExMachina, licensed under GPLv3.0.
+
+AsyncReaderWriterLock by .NEXT, licensed under MIT.
