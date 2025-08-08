@@ -1,21 +1,18 @@
-﻿using In_Memory_Database.Classes.Dependencies.Managers;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Reflection;
 using System.Security.Cryptography;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable :DefaultContractResolver, IDataTable
+    public class DataTable : DefaultContractResolver, IDataTable
     {
-        public string Name
-        {
-            get; set;
-        }
+        public string Name { get; set; }
         private List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
         private List<string> _columnNames = [];
@@ -24,17 +21,11 @@ namespace In_Memory_Database.Classes.Data
         private readonly object tableOperationsLock = new();
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get
-            {
-                return _columnTypes.AsReadOnly();
-            }
+            get { return _columnTypes.AsReadOnly(); }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get
-            {
-                return _columnNames.AsReadOnly();
-            }
+            get { return _columnNames.AsReadOnly(); }
         }
         private List<DataRow> _rows = [];
 
@@ -77,31 +68,19 @@ namespace In_Memory_Database.Classes.Data
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get
-            {
-                return _indexTables.AsReadOnly();
-            }
+            get { return _indexTables.AsReadOnly(); }
         }
         public string Size
         {
-            get
-            {
-                return Width + "x" + Height;
-            }
+            get { return Width + "x" + Height; }
         }
         public int Width
         {
-            get
-            {
-                return _columnTypes.Count;
-            }
+            get { return _columnTypes.Count; }
         }
         public int Height
         {
-            get
-            {
-                return Rows.Count();
-            }
+            get { return Rows.Count(); }
         }
 
         public DataTable(
@@ -370,6 +349,22 @@ namespace In_Memory_Database.Classes.Data
 
             if (!hasOnGoingTransaction)
                 TransactionManager.Commit();
+        }
+
+        public async Task VacuumInactiveRows()
+        {
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+
+            var xid = TransactionManager.Begin();
+
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
+            //Deletes all the non-active versions.
+            _rows = Rows.ToList();
+            TransactionManager.Commit();
         }
 
         public void CreateIndex(string targetColumn)

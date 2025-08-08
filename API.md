@@ -50,7 +50,7 @@ Manual call to save to disk
 
 ### `LoadFromDisk()` - Method
 
-Loads the database from the specified disk location.
+Loads the database from the specified disk location. When loading the all the rows will be given an xid of 0, which is a special id for all transactions that came from earlier snapshot.
 
 ### `ClearDb()` - Method
 
@@ -113,6 +113,10 @@ Manually change where to save in
 ### `ClearTable()` - Async Method
 
 Delete all rows
+
+### `VaccumInActiveRows()` - Async Method
+
+Delete all rows versions that are already deleted. Acquired an access exclusive lock for the period and filters out rows to only visible version.
 
 ### `CreateIndex(targetColumn)` - Async Method
 

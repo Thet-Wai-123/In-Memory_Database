@@ -1,11 +1,11 @@
-﻿using In_Memory_Database.Classes.Data;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using In_Memory_Database.Classes.Data;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
@@ -17,7 +17,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
         private static readonly ConcurrentDictionary<long, Transaction> _allTransactionsStatus =
             new();
 
-        internal static void Begin()
+        internal static long Begin()
         {
             if (_currentTransaction.Value != null)
             {
@@ -31,6 +31,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
                 _nextId++;
             }
             _allTransactionsStatus.TryAdd(newTransaction.xid, newTransaction);
+            return newTransaction.xid;
         }
 
         internal static long PeekTopId()

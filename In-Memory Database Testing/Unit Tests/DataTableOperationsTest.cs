@@ -105,5 +105,23 @@ namespace In_Memory_Database_Testing
             await table.RemoveColumn("Age");
             Assert.Equal(1, table.Width);
         }
+
+        //[Fact]
+        //public async void VacuumTest_ExpectOldRowsToGetDeleted()
+        //{
+        //    //Arrange
+        //    var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
+        //    var row1 = new DataRow { 1 };
+        //    await table.AddRow(row1);
+
+        //    //Act
+        //    await table.UpdateRow(new SearchConditions("Age", "==", 1), "Age", 2);
+        //    await table.UpdateRow(new SearchConditions("Age", "==", 2), "Age", 3);
+
+        //    //set a debugger and see _rows? Its private and don't want to make it internal.
+        //    await table.VacuumInactiveRows();
+
+        //    Assert.True(true);
+        //}
     }
 }
