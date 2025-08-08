@@ -37,39 +37,42 @@ namespace In_Memory_Database.Classes.Data
             }
         }
         private List<DataRow> _rows = [];
+
+        [JsonProperty]
         public ReadOnlyCollection<DataRow> Rows
         {
             get
             {
                 lock (tableOperationsLock)
                 {
-                    List<DataRow> result = new();
-                    var curTransaction = TransactionManager.GetCurrentTransaction();
-                    var xid =
-                        curTransaction != null
-                            ? curTransaction.xid
-                            : TransactionManager.PeekTopId();
-                    foreach (var (datarow, version) in RowsVersions)
-                    {
-                        //(xmin is committed AND xmax is not committed) OR (xmin == xid < xmax)
-                        if (
-                            (
-                                TransactionManager.checkTransactionStatus(version.Xmin)
-                                && !TransactionManager.checkTransactionStatus(version.Xmax)
-                            ) || (xid == version.Xmin && xid < version.Xmax)
-                        )
-                        {
-                            result.Add(datarow);
-                        }
-                    }
-                    return result.AsReadOnly();
+                    return FilterByCommited(_rows).AsReadOnly();
                 }
             }
         }
-        private Dictionary<DataRow, DataRowVersion> RowsVersions
+
+        private List<DataRow> FilterByCommited(List<DataRow> rows)
         {
-            get; init;
+            List<DataRow> result = new();
+            var curTransaction = TransactionManager.GetCurrentTransaction();
+            var xid = curTransaction != null ? curTransaction.xid : TransactionManager.PeekTopId();
+            foreach (var row in rows)
+            {
+                var version = _rowsVersions[row];
+                //(xmin is committed AND xmax is not committed) OR (xmin == xid < xmax)
+                if (
+                    (
+                        TransactionManager.checkTransactionStatus(version.Xmin)
+                        && !TransactionManager.checkTransactionStatus(version.Xmax)
+                    ) || (xid == version.Xmin && xid < version.Xmax)
+                )
+                {
+                    result.Add(row);
+                }
+            }
+            return result;
         }
+
+        private Dictionary<DataRow, DataRowVersion> _rowsVersions = [];
 
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
@@ -112,10 +115,9 @@ namespace In_Memory_Database.Classes.Data
             _columnNames = columnNames;
             _columnTypes = columnTypes;
             _searchManager = searchManager;
-            RowsVersions = [];
         }
 
-        //Only used when loading from disk, otherwise rows will not be initialized correctly
+        //Only used when loading from disk, otherwise rows will not be initialized correctly. Here we assume the rows version to be 0, to essentially reset them
         [JsonConstructor]
         public DataTable(
             string name,
@@ -128,7 +130,6 @@ namespace In_Memory_Database.Classes.Data
             Name = name;
             _columnTypes = columnTypes;
             _columnNames = columnNames;
-            RowsVersions = [];
             //Without this, after deserializing back, the state will not be exactly the same, as the default type will be set to dynamic.
             foreach (DataRow row in rows)
             {
@@ -136,11 +137,13 @@ namespace In_Memory_Database.Classes.Data
                 {
                     row[i] = Convert.ChangeType(row[i], columnTypes[i]);
                 }
+                _rowsVersions.Add(row, new DataRowVersion(0, long.MaxValue));
             }
             _rows = rows;
-            foreach (string table in indexTables.Keys)
+
+            foreach (string column in indexTables.Keys)
             {
-                CreateIndex(table);
+                CreateIndex(column);
             }
         }
 
@@ -215,7 +218,8 @@ namespace In_Memory_Database.Classes.Data
                 xid = TransactionManager.GetCurrentTransaction().xid;
 
             await LockManager.GetLock(LockManager.LockType.AccessShareLock, this, xid);
-            return _searchManager.Search(ColumnNames, Rows, conditions, IndexTables);
+            var unfilteredRows = _searchManager.Search(ColumnNames, _rows, conditions, IndexTables);
+            return FilterByCommited(unfilteredRows).AsReadOnly();
         }
 
         public async Task AddRow(DataRow newRow)
@@ -253,7 +257,7 @@ namespace In_Memory_Database.Classes.Data
                     int position = _columnNames.FindIndex((c) => pair.Key == c);
                     pair.Value.Insert(position, newRow);
                 }
-                RowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
+                _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
             }
 
             if (!hasOnGoingTransaction)
@@ -268,13 +272,8 @@ namespace In_Memory_Database.Classes.Data
 
             var xid = TransactionManager.GetCurrentTransaction().xid;
 
-            var toBeRemovedrows = _searchManager.Search(
-                ColumnNames,
-                Rows,
-                searchConditions,
-                IndexTables,
-                true
-            );
+            var toBeRemovedrows = await this.Search(searchConditions);
+
             if (toBeRemovedrows.Count == 0)
             {
                 return;
@@ -291,7 +290,7 @@ namespace In_Memory_Database.Classes.Data
             {
                 foreach (var removedRow in toBeRemovedrows)
                 {
-                    RowsVersions[removedRow].Xmax = xid;
+                    _rowsVersions[removedRow].Xmax = xid;
                 }
 
                 if (!hasOnGoingTransaction)
@@ -334,7 +333,7 @@ namespace In_Memory_Database.Classes.Data
             {
                 foreach (DataRow oldRow in foundRows)
                 {
-                    RowsVersions[oldRow].Xmax = xid;
+                    _rowsVersions[oldRow].Xmax = xid;
 
                     DataRow newRow = new(oldRow);
                     newRow[columnIndex] = newValue;
@@ -344,7 +343,7 @@ namespace In_Memory_Database.Classes.Data
                         int position = _columnNames.FindIndex((c) => pair.Key == c);
                         pair.Value.Insert(position, newRow);
                     }
-                    RowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
+                    _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
                 }
             }
 
@@ -357,14 +356,16 @@ namespace In_Memory_Database.Classes.Data
             var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
             if (!hasOnGoingTransaction)
                 TransactionManager.Begin();
-            await LockManager.GetLock(
-                LockManager.LockType.AccessExclusiveLock,
-                this,
-                TransactionManager.GetCurrentTransaction().xid
-            );
+
+            var xid = TransactionManager.GetCurrentTransaction().xid;
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
             lock (tableOperationsLock)
             {
-                _rows.Clear();
+                foreach (var row in Rows)
+                {
+                    _rowsVersions[row].Xmax = xid;
+                }
             }
 
             if (!hasOnGoingTransaction)

@@ -19,7 +19,6 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
-            LockManager.SetUpLockForNewTable(table);
             var row1 = new DataRow { 1 };
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };
@@ -43,7 +42,6 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
-            LockManager.SetUpLockForNewTable(table);
             var row1 = new DataRow { 1 };
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };
@@ -65,7 +63,6 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
-            LockManager.SetUpLockForNewTable(table);
             var row1 = new DataRow { 1 };
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };
@@ -93,7 +90,6 @@ namespace In_Memory_Database_Testing
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
-            LockManager.SetUpLockForNewTable(table);
             var row1 = new DataRow { 1 };
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };

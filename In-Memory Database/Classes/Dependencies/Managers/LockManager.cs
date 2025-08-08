@@ -36,11 +36,6 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             AccessExclusiveLock //Change Structure
         }
 
-        internal static void SetUpLockForNewTable(IDataTable dt)
-        {
-            rwlocks.TryAdd(dt, new AsyncReaderWriterLock());
-        }
-
         internal static async Task GetLock(
             LockType lockType,
             IDataTable dt,
@@ -48,6 +43,8 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             DataRow? dataRow = null
         )
         {
+            rwlocks.TryAdd(dt, new AsyncReaderWriterLock());
+
             var heldLocks = xidToHeldLocks.GetOrAdd(
                 xid,
                 _ => new ConcurrentDictionary<IDataTable, LockType>()

@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
-    public class DiskManager : IDiskManager
+    public class DiskManager :IDiskManager
     {
         public void SaveTodisk(Database db, string dir)
         {
@@ -38,16 +38,6 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
                 }
             }
             db.CopyTables(tablesGenerated);
-
-            //foreach (var table in tablesGenerated)
-            //{
-            //    db.CreateTable(
-            //        table.Key,
-            //        new List<string>(table.Value.ColumnNames),
-            //        new List<Type>(table.Value.ColumnTypes),
-            //        new List<DataRow>(table.Value.Rows)
-            //    );
-            //}
         }
     }
 }

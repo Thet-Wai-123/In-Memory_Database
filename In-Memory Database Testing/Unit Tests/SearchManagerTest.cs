@@ -1,8 +1,8 @@
-﻿using System.Collections.ObjectModel;
-using In_Memory_Database.Classes.Data;
+﻿using In_Memory_Database.Classes.Data;
 using In_Memory_Database.Classes.Data;
 using In_Memory_Database.Classes.Dependencies.Managers;
 using Moq;
+using System.Collections.ObjectModel;
 
 namespace In_Memory_Database_Testing
 {
@@ -39,9 +39,10 @@ namespace In_Memory_Database_Testing
             mockTable.Object.AddRow(row4);
 
             //Act
+            List<DataRow> Rows = mockTable.Object.Rows.ToList();
             var searchResult = searchManager.Search(
                 mockTable.Object.ColumnNames,
-                mockTable.Object.Rows,
+                Rows,
                 condition,
                 mockTable.Object.IndexTables
             );

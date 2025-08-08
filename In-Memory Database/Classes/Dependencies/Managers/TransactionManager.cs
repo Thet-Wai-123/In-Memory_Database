@@ -73,6 +73,12 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
 
         internal static bool checkTransactionStatus(long xid)
         {
+            //Special id resetted, in a way this is like freezing in psql to reset and wrap if necessary.
+            if (xid == 0)
+            {
+                return true;
+            }
+
             if (_allTransactionsStatus.ContainsKey(xid))
             {
                 return _allTransactionsStatus[xid].IsCommitted;

@@ -1,13 +1,13 @@
-﻿using System;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
-using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 //dotnet build
@@ -51,12 +51,13 @@ namespace In_Memory_Database_Benchmark
         }
 
         [Benchmark]
-        public ReadOnlyCollection<DataRow> SearchStringWithoutIndex()
+        public List<DataRow> SearchStringWithoutIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            List<DataRow> Rows = tempTable.Rows.ToList();
             return searchManager.Search(
                 tempTable.ColumnNames,
-                tempTable.Rows,
+                Rows,
                 condition,
                 tempTable.IndexTables,
                 false
@@ -64,12 +65,13 @@ namespace In_Memory_Database_Benchmark
         }
 
         [Benchmark]
-        public ReadOnlyCollection<DataRow> SearchStringWithIndex()
+        public List<DataRow> SearchStringWithIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            List<DataRow> Rows = tempTable.Rows.ToList();
             return searchManager.Search(
                 tempTable.ColumnNames,
-                tempTable.Rows,
+                Rows,
                 condition,
                 tempTable.IndexTables,
                 true

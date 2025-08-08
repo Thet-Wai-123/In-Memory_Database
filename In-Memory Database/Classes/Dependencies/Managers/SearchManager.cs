@@ -1,22 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using In_Memory_Database.Classes.Data;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using In_Memory_Database.Classes.Data;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
-    public class SearchManager : ISearchManager
+    public class SearchManager :ISearchManager
     {
         //A general search and will automatically use search by index if it exists, otherwise sequential search
-        public ReadOnlyCollection<DataRow> Search(
+        public List<DataRow> Search(
             ReadOnlyCollection<string> columnNames,
-            ReadOnlyCollection<DataRow> rows,
+            List<DataRow> rows,
             SearchConditions conditions,
             ReadOnlyDictionary<string, IndexTable> indexTables,
             bool useIndex = true
         )
         {
             ReadOnlyCollection<string> _columnNames = columnNames;
-            ReadOnlyCollection<DataRow> _rows = rows;
+            List<DataRow> _rows = rows;
             ReadOnlyDictionary<string, IndexTable> _indexTables = indexTables;
 
             //First making sure that the column exists
@@ -31,7 +31,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             }
             if (targetColumnIndex == -1)
             {
-                return new ReadOnlyCollection<DataRow>([]);
+                return [];
             }
 
             //It does exist, so search
@@ -41,24 +41,29 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
             if (useIndex && _indexTables.ContainsKey(conditions.ColumnName))
             {
                 var indexTable = _indexTables[conditions.ColumnName];
-                matchingRows = IndexSearch(indexTable, conditions);
+                matchingRows = IndexSearch(indexTable, conditions, _rows);
             }
             else
             {
                 matchingRows = SequentialSearch(_rows, targetColumnIndex, conditions);
             }
-            return matchingRows.AsReadOnly();
+            return matchingRows;
         }
 
-        private List<DataRow> IndexSearch(IndexTable indexTable, SearchConditions conditions)
+        private List<DataRow> IndexSearch(
+            IndexTable indexTable,
+            SearchConditions conditions,
+            List<DataRow> rows
+        )
         {
             dynamic keyValue = conditions.Value;
             string op = conditions.Op;
+
             return indexTable.Search(keyValue, op);
         }
 
         private List<DataRow> SequentialSearch(
-            ReadOnlyCollection<DataRow> rows,
+            List<DataRow> rows,
             int targetColumnIndex,
             SearchConditions conditions
         )
