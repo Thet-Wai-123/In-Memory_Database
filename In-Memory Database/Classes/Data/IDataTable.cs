@@ -45,7 +45,7 @@ namespace In_Memory_Database.Classes.Data
         public Task RemoveRow(SearchConditions searchConditions);
         public Task<ReadOnlyCollection<DataRow>> Search(SearchConditions conditions);
         public Task ClearTable();
-        public void CreateIndex(string targetColumn);
-        public void DeleteIndex(string targetColumn);
+        public Task CreateIndex(string targetColumn);
+        public Task DeleteIndex(string targetColumn);
     }
 }

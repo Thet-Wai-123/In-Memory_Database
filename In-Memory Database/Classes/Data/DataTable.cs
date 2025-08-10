@@ -380,13 +380,15 @@ namespace In_Memory_Database.Classes.Data
             TransactionManager.Commit();
         }
 
-        public void CreateIndex(string targetColumn)
+        public async Task CreateIndex(string targetColumn)
         {
             if (TransactionManager.GetCurrentTransaction() != null)
                 throw new Exception(
                     "This method is not supported inside explicitly called transaction"
                 );
             var xid = TransactionManager.Begin();
+
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
 
             lock (tableOperationsLock)
             {
@@ -410,13 +412,15 @@ namespace In_Memory_Database.Classes.Data
             TransactionManager.Commit();
         }
 
-        public void DeleteIndex(string targetColumn)
+        public async Task DeleteIndex(string targetColumn)
         {
             if (TransactionManager.GetCurrentTransaction() != null)
                 throw new Exception(
                     "This method is not supported inside explicitly called transaction"
                 );
             var xid = TransactionManager.Begin();
+
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
 
             lock (tableOperationsLock)
             {
