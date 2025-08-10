@@ -1,18 +1,21 @@
-﻿using System.Collections.Concurrent;
+﻿using In_Memory_Database.Classes.Dependencies.Managers;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Reflection;
 using System.Security.Cryptography;
-using In_Memory_Database.Classes.Dependencies.Managers;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable : DefaultContractResolver, IDataTable
+    public class DataTable :DefaultContractResolver, IDataTable
     {
-        public string Name { get; set; }
+        public string Name
+        {
+            get; set;
+        }
         private List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
         private List<string> _columnNames = [];
@@ -21,11 +24,17 @@ namespace In_Memory_Database.Classes.Data
         private readonly object tableOperationsLock = new();
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get { return _columnTypes.AsReadOnly(); }
+            get
+            {
+                return _columnTypes.AsReadOnly();
+            }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get { return _columnNames.AsReadOnly(); }
+            get
+            {
+                return _columnNames.AsReadOnly();
+            }
         }
         private List<DataRow> _rows = [];
 
@@ -68,19 +77,31 @@ namespace In_Memory_Database.Classes.Data
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get { return _indexTables.AsReadOnly(); }
+            get
+            {
+                return _indexTables.AsReadOnly();
+            }
         }
         public string Size
         {
-            get { return Width + "x" + Height; }
+            get
+            {
+                return Width + "x" + Height;
+            }
         }
         public int Width
         {
-            get { return _columnTypes.Count; }
+            get
+            {
+                return _columnTypes.Count;
+            }
         }
         public int Height
         {
-            get { return Rows.Count(); }
+            get
+            {
+                return Rows.Count();
+            }
         }
 
         public DataTable(
@@ -128,15 +149,13 @@ namespace In_Memory_Database.Classes.Data
 
         public async Task AddColumn(string name, Type type)
         {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+            var xid = TransactionManager.Begin();
 
-            await LockManager.GetLock(
-                LockManager.LockType.AccessExclusiveLock,
-                this,
-                TransactionManager.GetCurrentTransaction().xid
-            );
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
             lock (tableOperationsLock)
             {
                 _columnTypes.Add(type);
@@ -149,22 +168,18 @@ namespace In_Memory_Database.Classes.Data
                     }
                 }
             }
-
-            if (!hasOnGoingTransaction)
-                TransactionManager.Commit();
+            TransactionManager.Commit();
         }
 
         public async Task RemoveColumn(string name)
         {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+            var xid = TransactionManager.Begin();
 
-            await LockManager.GetLock(
-                LockManager.LockType.AccessExclusiveLock,
-                this,
-                TransactionManager.GetCurrentTransaction().xid
-            );
+            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
             lock (tableOperationsLock)
             {
                 int index = _columnNames.IndexOf(name);
@@ -184,8 +199,7 @@ namespace In_Memory_Database.Classes.Data
                 _indexTables.Remove(name);
             }
 
-            if (!hasOnGoingTransaction)
-                TransactionManager.Commit();
+            TransactionManager.Commit();
         }
 
         public async Task<ReadOnlyCollection<DataRow>> Search(SearchConditions conditions)
@@ -332,11 +346,12 @@ namespace In_Memory_Database.Classes.Data
 
         public async Task ClearTable()
         {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+            var xid = TransactionManager.Begin();
 
-            var xid = TransactionManager.GetCurrentTransaction().xid;
             await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
 
             lock (tableOperationsLock)
@@ -347,8 +362,7 @@ namespace In_Memory_Database.Classes.Data
                 }
             }
 
-            if (!hasOnGoingTransaction)
-                TransactionManager.Commit();
+            TransactionManager.Commit();
         }
 
         public async Task VacuumInactiveRows()
@@ -357,7 +371,6 @@ namespace In_Memory_Database.Classes.Data
                 throw new Exception(
                     "This method is not supported inside explicitly called transaction"
                 );
-
             var xid = TransactionManager.Begin();
 
             await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
@@ -369,6 +382,12 @@ namespace In_Memory_Database.Classes.Data
 
         public void CreateIndex(string targetColumn)
         {
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+            var xid = TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
                 for (int i = 0; i < Width; i++)
@@ -387,14 +406,24 @@ namespace In_Memory_Database.Classes.Data
                     }
                 }
             }
+
+            TransactionManager.Commit();
         }
 
         public void DeleteIndex(string targetColumn)
         {
+            if (TransactionManager.GetCurrentTransaction() != null)
+                throw new Exception(
+                    "This method is not supported inside explicitly called transaction"
+                );
+            var xid = TransactionManager.Begin();
+
             lock (tableOperationsLock)
             {
                 _indexTables.Remove(targetColumn);
             }
+
+            TransactionManager.Commit();
         }
 
         public void SetSearchManager(ISearchManager searchManager)
