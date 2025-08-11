@@ -106,22 +106,30 @@ namespace In_Memory_Database_Testing
             Assert.Equal(1, table.Width);
         }
 
-        //[Fact]
-        //public async void VacuumTest_ExpectOldRowsToGetDeleted()
-        //{
-        //    //Arrange
-        //    var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
-        //    var row1 = new DataRow { 1 };
-        //    await table.AddRow(row1);
+        [Fact]
+        public async void VacuumTest_ExpectOldRowsToGetDeleted()
+        {
+            //Arrange
+            var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
+            var row1 = new DataRow { 1 };
+            await table.AddRow(row1);
+            await table.CreateIndex("Age");
 
-        //    //Act
-        //    await table.UpdateRow(new SearchConditions("Age", "==", 1), "Age", 2);
-        //    await table.UpdateRow(new SearchConditions("Age", "==", 2), "Age", 3);
+            //Act
+            await table.UpdateRow(new SearchConditions("Age", "==", 1), "Age", 2);
+            await table.UpdateRow(new SearchConditions("Age", "==", 2), "Age", 3);
+            var tableLengthBefore = table.getRowsLengthIncludeHidden();
+            var indexLengthBefore = table.getIndexTableLength("Age");
 
-        //    //set a debugger and see _rows? Its private and don't want to make it internal.
-        //    await table.VacuumInactiveRows();
+            await table.VacuumInactiveRows();
+            var tableLengthAfter = table.getRowsLengthIncludeHidden();
+            var indexLengthAfter = table.getIndexTableLength("Age");
 
-        //    Assert.True(true);
-        //}
+            Assert.Equal(3, tableLengthBefore);
+            Assert.Equal(3, indexLengthBefore);
+            //Now the previous 2 versions has been dropped
+            Assert.Equal(1, tableLengthAfter);
+            Assert.Equal(1, indexLengthAfter);
+        }
     }
 }

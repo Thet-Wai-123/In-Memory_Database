@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using CodeExMachina;
+using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Xml.Linq;
-using CodeExMachina;
-using Newtonsoft.Json.Linq;
 
 namespace In_Memory_Database.Classes.Data
 {
@@ -12,10 +12,12 @@ namespace In_Memory_Database.Classes.Data
         public abstract void Insert(int columnIndex, DataRow row);
         public abstract void Delete(int columnIndex, DataRow row);
 
+        internal abstract int GetLength();
+
         protected int degree = 2;
     }
 
-    public class IndexTable<T> : IndexTable
+    public class IndexTable<T> :IndexTable
         where T : IComparable<T>
     {
         private readonly BTree<Node<T>> btree;
@@ -85,14 +87,25 @@ namespace In_Memory_Database.Classes.Data
 
         public override void Delete(int columnIndex, DataRow row)
         {
-            btree.Delete(new Node<T>(row[columnIndex], new List<DataRow> { row }));
+            HandleDeleteWithPossibleDuplicates(columnIndex, row);
+        }
+
+        internal override int GetLength()
+        {
+            return btree.Length;
         }
 
         private class Node<TKey>
             where TKey : IComparable<TKey>
         {
-            public TKey Key { get; }
-            public List<DataRow> Value { get; }
+            public TKey Key
+            {
+                get;
+            }
+            public List<DataRow> Value
+            {
+                get;
+            }
 
             public Node(TKey key, List<DataRow> value)
             {
@@ -101,7 +114,7 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        private class KeyComparer<TKey> : Comparer<Node<TKey>>
+        private class KeyComparer<TKey> :Comparer<Node<TKey>>
             where TKey : IComparable<TKey>
         {
             public override int Compare(Node<TKey> a, Node<TKey> b)
@@ -117,6 +130,22 @@ namespace In_Memory_Database.Classes.Data
             if (prevNode != null)
             {
                 node.Value.AddRange(prevNode.Value);
+            }
+        }
+
+        private void HandleDeleteWithPossibleDuplicates(int columnIndex, DataRow row)
+        {
+            T key = row[columnIndex];
+            var prevNode = btree.Get(new Node<T>(key, []));
+
+            if (prevNode != null)
+            {
+                bool removed = prevNode.Value.Remove(row);
+
+                if (removed && prevNode.Value.Count == 0)
+                {
+                    btree.Delete(prevNode);
+                }
             }
         }
     }

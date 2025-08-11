@@ -1,4 +1,5 @@
-﻿using In_Memory_Database.Classes.Dependencies.Managers;
+﻿using DotNext.Collections.Generic;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -360,6 +361,7 @@ namespace In_Memory_Database.Classes.Data
                 {
                     _rowsVersions[row].Xmax = xid;
                 }
+                _indexTables.Clear();
             }
 
             TransactionManager.Commit();
@@ -375,8 +377,38 @@ namespace In_Memory_Database.Classes.Data
 
             await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
 
-            //Deletes all the non-active versions.
-            _rows = Rows.ToList();
+            //Keep track of this for indexTable to also delete inactive nodes.
+            List<DataRow> inactiveRows = new();
+
+            lock (tableOperationsLock)
+            {
+                foreach (var row in _rows)
+                {
+                    var version = _rowsVersions[row];
+                    if (
+                        !(
+                            TransactionManager.checkTransactionStatus(version.Xmin)
+                            && !TransactionManager.checkTransactionStatus(version.Xmax)
+                        ) && !(xid == version.Xmin && xid < version.Xmax)
+                    )
+                    {
+                        inactiveRows.Add(row);
+                    }
+                }
+                //Deleting the nodes in the index table
+                for (int i = 0; i < Width; i++)
+                {
+                    if (_indexTables.ContainsKey(_columnNames[i]))
+                    {
+                        foreach (var inactiveRow in inactiveRows)
+                            _indexTables[_columnNames[i]].Delete(i, inactiveRow);
+                    }
+                }
+
+                //Deletes all the non-active versions in _rows
+                _rows = FilterByCommited(_rows).ToList();
+            }
+
             TransactionManager.Commit();
         }
 
@@ -449,6 +481,17 @@ namespace In_Memory_Database.Classes.Data
                 }
                 return result;
             }
+        }
+
+        //These 2 methods belwo are internal for for making sure vacuum method works
+        internal int getRowsLengthIncludeHidden()
+        {
+            return _rows.Count();
+        }
+
+        internal int getIndexTableLength(string indexName)
+        {
+            return _indexTables[indexName].GetLength();
         }
     }
 }
