@@ -1,32 +1,27 @@
-﻿using DotNext.Threading;
-using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Helpers;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DotNext.Threading;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Helpers;
 
 namespace In_Memory_Database.Classes.Dependencies.Managers
 {
     //This is more for shared locks which will be shared and be called at the end of commit or abort.
     internal static class LockManager
     {
-        // Each datatable should have one lock
+        //Each datatable should have one lock
         static ConcurrentDictionary<IDataTable, AsyncReaderWriterLock> rwlocks = new();
 
-        // Xid => lock it holds (This makes sure that each context will only call to lock on rwlocks[dt] once, meaning no recursive for any single context)
+        //Xid => lock it holds (This makes sure that each context will only call to lock on rwlocks[dt] once, meaning no recursive for any single context)
         static ConcurrentDictionary<
             long,
             ConcurrentDictionary<IDataTable, LockType>
         > xidToHeldLocks = new();
 
-        //COMBINE this ad bottom one
-        // This is for cleaning up the lock using just xid. You know the xid but to delete the affected rows from rwlocks, you need this to keep track.
-        //static ConcurrentDictionary<long, HashSet<IDataTable>> xidToTables = new();
-
-        // Track current rows that are locked
         static BidirectionalConcurrentMap rowsToTransactionsMap = new();
 
         internal enum LockType

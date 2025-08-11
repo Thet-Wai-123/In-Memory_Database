@@ -1,41 +1,32 @@
-﻿using DotNext.Collections.Generic;
-using In_Memory_Database.Classes.Dependencies.Managers;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Reflection;
 using System.Security.Cryptography;
+using DotNext.Collections.Generic;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace In_Memory_Database.Classes.Data
 {
-    public class DataTable :DefaultContractResolver, IDataTable
+    public class DataTable : DefaultContractResolver, IDataTable
     {
-        public string Name
-        {
-            get; set;
-        }
-        private List<Type> _columnTypes = [];
+        public string Name { get; set; }
+        private readonly List<Type> _columnTypes = [];
         private ISearchManager _searchManager;
-        private List<string> _columnNames = [];
+        private readonly List<string> _columnNames = [];
 
         //this lock will be used to do any operation here, and then released immediately after its done. For ongoing transaction, there will be another shared lock from LockManager
         private readonly object tableOperationsLock = new();
         public ReadOnlyCollection<Type> ColumnTypes
         {
-            get
-            {
-                return _columnTypes.AsReadOnly();
-            }
+            get { return _columnTypes.AsReadOnly(); }
         }
         public ReadOnlyCollection<string> ColumnNames
         {
-            get
-            {
-                return _columnNames.AsReadOnly();
-            }
+            get { return _columnNames.AsReadOnly(); }
         }
         private List<DataRow> _rows = [];
 
@@ -78,31 +69,19 @@ namespace In_Memory_Database.Classes.Data
         private Dictionary<string, IndexTable> _indexTables = [];
         public ReadOnlyDictionary<string, IndexTable> IndexTables
         {
-            get
-            {
-                return _indexTables.AsReadOnly();
-            }
+            get { return _indexTables.AsReadOnly(); }
         }
         public string Size
         {
-            get
-            {
-                return Width + "x" + Height;
-            }
+            get { return Width + "x" + Height; }
         }
         public int Width
         {
-            get
-            {
-                return _columnTypes.Count;
-            }
+            get { return _columnTypes.Count; }
         }
         public int Height
         {
-            get
-            {
-                return Rows.Count();
-            }
+            get { return Rows.Count; }
         }
 
         public DataTable(
@@ -148,8 +127,12 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public async Task AddColumn(string name, Type type)
+        public async Task AddColumn(string name, Type type, object? defaultValue = null)
         {
+            if (defaultValue != null && defaultValue?.GetType() != type)
+            {
+                throw new ArgumentException("Wrong default value passed into creating new column");
+            }
             if (TransactionManager.GetCurrentTransaction() != null)
                 throw new Exception(
                     "This method is not supported inside explicitly called transaction"
@@ -163,10 +146,7 @@ namespace In_Memory_Database.Classes.Data
                 _columnNames.Add(name);
                 foreach (var row in _rows)
                 {
-                    lock (tableOperationsLock)
-                    {
-                        row.Append(null);
-                    }
+                    row.Add(defaultValue);
                 }
             }
             TransactionManager.Commit();
@@ -235,11 +215,7 @@ namespace In_Memory_Database.Classes.Data
                 //use a loop here to check beforehand if all the types match first
                 for (int i = 0; i < Width; i++)
                 {
-                    if (newRow[i] == null)
-                    {
-                        continue;
-                    }
-                    else if (newRow[i].GetType() != _columnTypes[i])
+                    if (newRow[i] != null && newRow[i].GetType() != _columnTypes[i])
                     {
                         throw new ArgumentException("Input doesn't match the table column's type");
                     }
@@ -431,12 +407,15 @@ namespace In_Memory_Database.Classes.Data
                         var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
                             _columnTypes[i]
                         );
-                        object indexTableInstance = Activator.CreateInstance(
+                        object? indexTableInstance = Activator.CreateInstance(
                             genericIndexTableType,
                             i,
                             _rows
                         );
-                        _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                        if (indexTableInstance != null)
+                            _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                        else
+                            throw new Exception("Something wrong with creating new index");
                     }
                 }
             }

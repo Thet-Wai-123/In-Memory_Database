@@ -37,23 +37,10 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public void CreateTable(
-            string tableName,
-            List<string> columnNames,
-            List<Type> columnTypes,
-            List<DataRow> rows = null
-        )
+        public void CreateTable(string tableName, List<string> columnNames, List<Type> columnTypes)
         {
             var generatedTable = new DataTable(tableName, columnNames, columnTypes, _searchManager);
             _tables.Add(tableName, generatedTable);
-
-            if (rows != null)
-            {
-                foreach (var row in rows)
-                {
-                    _tables[tableName].AddRow(row);
-                }
-            }
         }
 
         public void CopyTables(Dictionary<string, DataTable> tables)
@@ -66,7 +53,7 @@ namespace In_Memory_Database.Classes.Data
         }
 
         public DataTable this[string tableName] =>
-            Tables.TryGetValue(tableName, out DataTable table)
+            Tables.TryGetValue(tableName, out DataTable? table)
                 ? table
                 : throw new KeyNotFoundException();
 

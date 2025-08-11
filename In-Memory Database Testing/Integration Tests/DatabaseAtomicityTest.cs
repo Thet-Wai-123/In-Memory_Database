@@ -1,10 +1,10 @@
-﻿using System;
+﻿using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -85,12 +85,10 @@ namespace In_Memory_Database_Testing.Integration_Tests
                     );
 
                 throw new Exception("Crashed");
-
-                db.Commit();
             }
             catch
             {
-                db.Abort();
+                //db.Abort();
             }
 
             //Assert

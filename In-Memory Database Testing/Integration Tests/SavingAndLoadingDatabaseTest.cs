@@ -1,7 +1,7 @@
-﻿using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using Xunit.Abstractions;
 
 namespace In_Memory_Database_Testing
@@ -30,7 +30,7 @@ namespace In_Memory_Database_Testing
             await db["AgeTable"].AddRow(new DataRow { 4 });
             db.Abort();
 
-            db["AgeTable"].CreateIndex("Age");
+            await db["AgeTable"].CreateIndex("Age");
 
             var indexedSearchResults = await db["AgeTable"]
                 .Search(new SearchConditions("Age", ">=", 0));

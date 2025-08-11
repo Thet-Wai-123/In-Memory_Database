@@ -37,17 +37,17 @@ namespace In_Memory_Database_Benchmark
         }
 
         [GlobalSetup(Targets = [nameof(SearchStringWithoutIndex), nameof(SearchStringWithIndex)])]
-        public void SetupWithIndex()
+        public async void SetupWithIndex()
         {
             FillInTableWithRandomRows(tempTable);
-            tempTable.CreateIndex("Name");
+            await tempTable.CreateIndex("Name");
             rowToFind = tempTable.Rows[rnd.Next(1, rowCount)];
         }
 
         [Benchmark]
-        public void CreatingIndex()
+        public async void CreatingIndex()
         {
-            tempTable.CreateIndex("Age");
+            await tempTable.CreateIndex("Age");
         }
 
         [Benchmark]

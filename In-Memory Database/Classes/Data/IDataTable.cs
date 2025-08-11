@@ -38,7 +38,7 @@ namespace In_Memory_Database.Classes.Data
             get;
         }
 
-        public Task AddColumn(string name, Type type);
+        public Task AddColumn(string name, Type type, object defaultValue);
         public Task RemoveColumn(string name);
         public Task AddRow(DataRow row);
         public Task UpdateRow(SearchConditions searchConditions, string column, object newValue);

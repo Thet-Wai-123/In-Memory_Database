@@ -1,11 +1,11 @@
-﻿using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 
 namespace In_Memory_Database_Testing.Integration_Tests
 {
@@ -126,52 +126,38 @@ namespace In_Memory_Database_Testing.Integration_Tests
         }
 
         [Fact]
-        public async Task ChangingTableStructureLocksTheTable_ExpectAllOperationsToBeLocked()
+        public async Task ExclusiveTableLockConflictsWithOtherLocks_ExpectCorrectOrder()
         {
             //Arrange
             var db = new Database(new SearchManager(), new DiskManager());
             db.CreateTable("Student", new List<string> { "Id" }, new List<Type> { typeof(int) });
 
             //Helpers to help with test
-            var orderOfCompletion = new List<int>();
-            var t1Started = new TaskCompletionSource<bool>();
+            var orderOfCompletion = new List<string>();
+            var readTransactionInProgress = new TaskCompletionSource<bool>();
 
             //Act
-            //Exclusive Lock held, so this t1 will always finish first despite waiting.
-            var transaction1 = Task.Run(async () =>
+            var rowExclusive = Task.Run(async () =>
             {
                 db.Begin();
-                await db["Student"].AddColumn("Name", typeof(String));
-                t1Started.SetResult(true);
-
+                await db["Student"].AddRow([1]);
+                readTransactionInProgress.SetResult(true);
                 await Task.Delay(1000);
-
-                orderOfCompletion.Add(1);
                 db.Commit();
+                orderOfCompletion.Add("Add Row");
             });
 
-            await t1Started.Task;
-
-            //Read is blocked
-            var transaction2 = Task.Run(async () =>
+            var accessExclusive = Task.Run(async () =>
             {
-                db.Begin();
-                await db["Student"].Search(new SearchConditions("Id", "==", 1));
-                orderOfCompletion.Add(2);
+                await readTransactionInProgress.Task;
+                await db["Student"].AddColumn("Name", typeof(String));
+                orderOfCompletion.Add("Add Column");
             });
 
-            //Write is blocked
-            var transaction3 = Task.Run(async () =>
-            {
-                db.Begin();
-                await db["Student"].AddRow(new DataRow { 1, "John" });
-                orderOfCompletion.Add(3);
-            });
-
-            await Task.WhenAll(transaction1, transaction2, transaction3);
+            await Task.WhenAll(rowExclusive, accessExclusive);
 
             //Assert
-            Assert.Equal(1, orderOfCompletion[0]);
+            Assert.Equal("Add Column", orderOfCompletion[1]);
         }
     }
 }

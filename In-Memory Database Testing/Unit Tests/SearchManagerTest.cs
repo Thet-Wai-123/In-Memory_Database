@@ -1,5 +1,4 @@
 ﻿using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Data;
 using In_Memory_Database.Classes.Dependencies.Managers;
 using Moq;
 using System.Collections.ObjectModel;

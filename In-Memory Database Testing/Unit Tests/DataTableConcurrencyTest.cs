@@ -24,26 +24,26 @@ namespace In_Memory_Database_Testing
         //end of debugging
 
         [Fact]
-        public void AddingMultipleRowsConcurrently_ExpectCorrectRowsCount()
+        public async void AddingMultipleRowsConcurrently_ExpectCorrectRowsCount()
         {
             //Arrange
             var table = new DataTable("Test", ["column1"], [typeof(int)], new SearchManager());
 
             //Act
-            Task taskA = Task.Run(() => Add100Rows(table));
-            Task taskB = Task.Run(() => Add100Rows(table));
-            Task taskC = Task.Run(() => Add100Rows(table));
-            Task.WaitAll([taskA, taskB, taskC]);
+            Task taskA = Add100Rows(table);
+            Task taskB = Add100Rows(table);
+            Task taskC = Add100Rows(table);
+            await Task.WhenAll(taskA, taskB, taskC);
 
             //Assert
             Assert.Equal(300, table.Height);
         }
 
-        private void Add100Rows(DataTable table)
+        private async Task Add100Rows(DataTable table)
         {
             for (int i = 0; i < 100; i++)
             {
-                table.AddRow(new DataRow { 1 });
+                await table.AddRow(new DataRow { 1 });
             }
         }
     }
