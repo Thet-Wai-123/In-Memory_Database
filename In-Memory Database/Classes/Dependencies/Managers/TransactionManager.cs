@@ -57,7 +57,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
         {
             if (_currentTransaction.Value == null)
             {
-                throw new InvalidOperationException("No active transaction");
+                return;
             }
             var curTransaction = _currentTransaction.Value;
             _allTransactionsStatus.TryRemove(curTransaction.xid, out _);

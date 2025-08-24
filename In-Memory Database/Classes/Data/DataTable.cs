@@ -150,58 +150,76 @@ namespace In_Memory_Database.Classes.Data
 
         public async Task AddColumn(string name, Type type, object? defaultValue = null)
         {
-            if (defaultValue != null && defaultValue?.GetType() != type)
+            try
             {
-                throw new ArgumentException("Wrong default value passed into creating new column");
-            }
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new InvalidOperationException(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new InvalidOperationException(
+                        "This method is not supported inside explicitly called transaction"
+                    );
 
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-            lock (tableOperationsLock)
-            {
-                _columnTypes.Add(type);
-                _columnNames.Add(name);
-                foreach (var row in _rows)
+                var xid = TransactionManager.Begin();
+                if (defaultValue != null && defaultValue?.GetType() != type)
                 {
-                    row.Add(defaultValue);
+                    throw new ArgumentException(
+                        "Wrong default value passed into creating new column"
+                    );
                 }
+
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+                lock (tableOperationsLock)
+                {
+                    _columnTypes.Add(type);
+                    _columnNames.Add(name);
+                    foreach (var row in _rows)
+                    {
+                        row.Add(defaultValue);
+                    }
+                }
+                TransactionManager.Commit();
             }
-            TransactionManager.Commit();
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task RemoveColumn(string name)
         {
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new InvalidOperationException(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
-
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-            lock (tableOperationsLock)
+            try
             {
-                int index = _columnNames.IndexOf(name);
-                if (index == -1)
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new InvalidOperationException(
+                        "This method is not supported inside explicitly called transaction"
+                    );
+                var xid = TransactionManager.Begin();
+
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+                lock (tableOperationsLock)
                 {
-                    throw new ArgumentException("Column doesn't exist");
+                    int index = _columnNames.IndexOf(name);
+                    if (index == -1)
+                    {
+                        throw new ArgumentException("Column doesn't exist");
+                    }
+
+                    _columnNames.RemoveAt(index);
+                    _columnTypes.RemoveAt(index);
+
+                    foreach (var row in _rows)
+                    {
+                        row.RemoveAt(index);
+                    }
+
+                    _indexTables.Remove(name);
                 }
-
-                _columnNames.RemoveAt(index);
-                _columnTypes.RemoveAt(index);
-
-                foreach (var row in _rows)
-                {
-                    row.RemoveAt(index);
-                }
-
-                _indexTables.Remove(name);
+                TransactionManager.Commit();
             }
-
-            TransactionManager.Commit();
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task<ReadOnlyCollection<DataRow>> Search(SearchConditions conditions)
@@ -219,73 +237,93 @@ namespace In_Memory_Database.Classes.Data
 
         public async Task AddRow(DataRow newRow)
         {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
-
-            var xid = TransactionManager.GetCurrentTransaction().xid;
-
-            await LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, newRow);
-
-            lock (tableOperationsLock)
+            try
             {
-                if (newRow.Count != Width)
+                var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+                if (!hasOnGoingTransaction)
+                    TransactionManager.Begin();
+
+                var xid = TransactionManager.GetCurrentTransaction().xid;
+
+                await LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, newRow);
+
+                lock (tableOperationsLock)
                 {
-                    throw new ArgumentException("Input doesn't match the table column's length");
-                }
-                //use a loop here to check beforehand if all the types match first
-                for (int i = 0; i < Width; i++)
-                {
-                    if (newRow[i] != null && newRow[i].GetType() != _columnTypes[i])
+                    if (newRow.Count != Width)
                     {
-                        throw new ArgumentException("Input doesn't match the table column's type");
+                        throw new ArgumentException(
+                            "Input doesn't match the table column's length"
+                        );
                     }
-                }
-                //add the row to current table and also index table
-                _rows.Add(newRow);
-                foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
-                {
-                    int position = _columnNames.FindIndex((c) => pair.Key == c);
-                    pair.Value.Insert(position, newRow);
-                }
-                _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
-            }
-
-            if (!hasOnGoingTransaction)
-                TransactionManager.Commit();
-        }
-
-        public async Task RemoveRow(SearchConditions searchConditions)
-        {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
-
-            var xid = TransactionManager.GetCurrentTransaction().xid;
-
-            var toBeRemovedrows = await this.Search(searchConditions);
-
-            if (toBeRemovedrows.Count == 0)
-            {
-                return;
-            }
-            foreach (var removedRow in toBeRemovedrows)
-                await LockManager.GetLock(
-                    LockManager.LockType.RowExclusiveLock,
-                    this,
-                    xid,
-                    removedRow
-                );
-
-            lock (tableOperationsLock)
-            {
-                foreach (var removedRow in toBeRemovedrows)
-                {
-                    _rowsVersions[removedRow].Xmax = xid;
+                    //use a loop here to check beforehand if all the types match first
+                    for (int i = 0; i < Width; i++)
+                    {
+                        if (newRow[i] != null && newRow[i].GetType() != _columnTypes[i])
+                        {
+                            throw new ArgumentException(
+                                "Input doesn't match the table column's type"
+                            );
+                        }
+                    }
+                    //add the row to current table and also index table
+                    _rows.Add(newRow);
+                    foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
+                    {
+                        int position = _columnNames.FindIndex((c) => pair.Key == c);
+                        pair.Value.Insert(position, newRow);
+                    }
+                    _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
                 }
 
                 if (!hasOnGoingTransaction)
                     TransactionManager.Commit();
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
+        }
+
+        public async Task RemoveRow(SearchConditions searchConditions)
+        {
+            try
+            {
+                var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+                if (!hasOnGoingTransaction)
+                    TransactionManager.Begin();
+
+                var xid = TransactionManager.GetCurrentTransaction().xid;
+
+                var toBeRemovedrows = await this.Search(searchConditions);
+
+                if (toBeRemovedrows.Count == 0)
+                {
+                    return;
+                }
+                foreach (var removedRow in toBeRemovedrows)
+                    await LockManager.GetLock(
+                        LockManager.LockType.RowExclusiveLock,
+                        this,
+                        xid,
+                        removedRow
+                    );
+
+                lock (tableOperationsLock)
+                {
+                    foreach (var removedRow in toBeRemovedrows)
+                    {
+                        _rowsVersions[removedRow].Xmax = xid;
+                    }
+
+                    if (!hasOnGoingTransaction)
+                        TransactionManager.Commit();
+                }
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
             }
         }
 
@@ -295,171 +333,211 @@ namespace In_Memory_Database.Classes.Data
             dynamic newValue
         )
         {
-            var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
-            if (!hasOnGoingTransaction)
-                TransactionManager.Begin();
-
-            if (!_columnNames.Contains(column))
+            try
             {
-                return;
-            }
-            var columnIndex = _columnNames.FindIndex(x => x == column);
-            if (newValue.GetType() != ColumnTypes[columnIndex])
-            {
-                throw new ArgumentException("Input doesn't match the table column's type");
-            }
-            var xid = TransactionManager.GetCurrentTransaction().xid;
-            var candidateRows = await this.Search(searchConditions);
+                var hasOnGoingTransaction = TransactionManager.GetCurrentTransaction() != null;
+                if (!hasOnGoingTransaction)
+                    TransactionManager.Begin();
 
-            var lockTasks = candidateRows.Select(row =>
-                LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, row)
-            );
-
-            await Task.WhenAll(lockTasks);
-
-            //Search again after locking to confirm that the condition still holds true
-            var foundRows = await this.Search(searchConditions);
-
-            lock (tableOperationsLock)
-            {
-                foreach (DataRow oldRow in foundRows)
+                if (!_columnNames.Contains(column))
                 {
-                    _rowsVersions[oldRow].Xmax = xid;
-
-                    DataRow newRow = new(oldRow);
-                    newRow[columnIndex] = newValue;
-                    _rows.Add(newRow);
-                    foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
-                    {
-                        int position = _columnNames.FindIndex((c) => pair.Key == c);
-                        pair.Value.Insert(position, newRow);
-                    }
-                    _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
+                    return;
                 }
-            }
+                var columnIndex = _columnNames.FindIndex(x => x == column);
+                if (newValue.GetType() != ColumnTypes[columnIndex])
+                {
+                    throw new ArgumentException("Input doesn't match the table column's type");
+                }
+                var xid = TransactionManager.GetCurrentTransaction().xid;
+                var candidateRows = await this.Search(searchConditions);
 
-            if (!hasOnGoingTransaction)
-                TransactionManager.Commit();
+                var lockTasks = candidateRows.Select(row =>
+                    LockManager.GetLock(LockManager.LockType.RowExclusiveLock, this, xid, row)
+                );
+
+                await Task.WhenAll(lockTasks);
+
+                //Search again after locking to confirm that the condition still holds true
+                var foundRows = await this.Search(searchConditions);
+
+                lock (tableOperationsLock)
+                {
+                    foreach (DataRow oldRow in foundRows)
+                    {
+                        _rowsVersions[oldRow].Xmax = xid;
+
+                        DataRow newRow = new(oldRow);
+                        newRow[columnIndex] = newValue;
+                        _rows.Add(newRow);
+                        foreach (KeyValuePair<string, IndexTable> pair in _indexTables)
+                        {
+                            int position = _columnNames.FindIndex((c) => pair.Key == c);
+                            pair.Value.Insert(position, newRow);
+                        }
+                        _rowsVersions.Add(newRow, new DataRowVersion(xid, long.MaxValue));
+                    }
+                }
+
+                if (!hasOnGoingTransaction)
+                    TransactionManager.Commit();
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task ClearTable()
         {
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new InvalidOperationException(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
-
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-
-            lock (tableOperationsLock)
+            try
             {
-                foreach (var row in Rows)
-                {
-                    _rowsVersions[row].Xmax = xid;
-                }
-                _indexTables.Clear();
-            }
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new InvalidOperationException(
+                        "This method is not supported inside explicitly called transaction"
+                    );
+                var xid = TransactionManager.Begin();
 
-            TransactionManager.Commit();
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
+                lock (tableOperationsLock)
+                {
+                    foreach (var row in Rows)
+                    {
+                        _rowsVersions[row].Xmax = xid;
+                    }
+                    _indexTables.Clear();
+                }
+
+                TransactionManager.Commit();
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task VacuumInactiveRows()
         {
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new InvalidOperationException(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
-
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-
-            //Keep track of this for indexTable to also delete inactive nodes.
-            List<DataRow> inactiveRows = new();
-
-            lock (tableOperationsLock)
+            try
             {
-                foreach (var row in _rows)
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new InvalidOperationException(
+                        "This method is not supported inside explicitly called transaction"
+                    );
+                var xid = TransactionManager.Begin();
+
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
+                //Keep track of this for indexTable to also delete inactive nodes.
+                List<DataRow> inactiveRows = new();
+
+                lock (tableOperationsLock)
                 {
-                    var version = _rowsVersions[row];
-                    if (
-                        !(
-                            TransactionManager.checkTransactionStatus(version.Xmin)
-                            && !TransactionManager.checkTransactionStatus(version.Xmax)
-                        ) && !(xid == version.Xmin && xid < version.Xmax)
-                    )
+                    foreach (var row in _rows)
                     {
-                        inactiveRows.Add(row);
+                        var version = _rowsVersions[row];
+                        if (
+                            !(
+                                TransactionManager.checkTransactionStatus(version.Xmin)
+                                && !TransactionManager.checkTransactionStatus(version.Xmax)
+                            ) && !(xid == version.Xmin && xid < version.Xmax)
+                        )
+                        {
+                            inactiveRows.Add(row);
+                        }
                     }
-                }
-                //Deleting the nodes in the index table
-                for (int i = 0; i < Width; i++)
-                {
-                    if (_indexTables.ContainsKey(_columnNames[i]))
+                    //Deleting the nodes in the index table
+                    for (int i = 0; i < Width; i++)
                     {
-                        foreach (var inactiveRow in inactiveRows)
-                            _indexTables[_columnNames[i]].Delete(i, inactiveRow);
+                        if (_indexTables.ContainsKey(_columnNames[i]))
+                        {
+                            foreach (var inactiveRow in inactiveRows)
+                                _indexTables[_columnNames[i]].Delete(i, inactiveRow);
+                        }
                     }
+
+                    //Deletes all the non-active versions in _rows
+                    _rows = FilterByCommited(_rows).ToList();
                 }
 
-                //Deletes all the non-active versions in _rows
-                _rows = FilterByCommited(_rows).ToList();
+                TransactionManager.Commit();
             }
-
-            TransactionManager.Commit();
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task CreateIndex(string targetColumn)
         {
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new Exception(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
-
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-
-            lock (tableOperationsLock)
+            try
             {
-                for (int i = 0; i < Width; i++)
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new Exception(
+                        "This method is not supported inside explicitly called transaction"
+                    );
+                var xid = TransactionManager.Begin();
+
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
+                lock (tableOperationsLock)
                 {
-                    if (_columnNames[i] == targetColumn)
+                    for (int i = 0; i < Width; i++)
                     {
-                        var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
-                            _columnTypes[i]
-                        );
-                        object? indexTableInstance = Activator.CreateInstance(
-                            genericIndexTableType,
-                            i,
-                            _rows
-                        );
-                        if (indexTableInstance != null)
-                            _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
-                        else
-                            throw new Exception("Something wrong with creating new index");
+                        if (_columnNames[i] == targetColumn)
+                        {
+                            var genericIndexTableType = typeof(IndexTable<>).MakeGenericType(
+                                _columnTypes[i]
+                            );
+                            object? indexTableInstance = Activator.CreateInstance(
+                                genericIndexTableType,
+                                i,
+                                _rows
+                            );
+                            if (indexTableInstance != null)
+                                _indexTables.Add(targetColumn, (IndexTable)indexTableInstance);
+                            else
+                                throw new Exception("Something wrong with creating new index");
+                        }
                     }
                 }
-            }
 
-            TransactionManager.Commit();
+                TransactionManager.Commit();
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public async Task DeleteIndex(string targetColumn)
         {
-            if (TransactionManager.GetCurrentTransaction() != null)
-                throw new Exception(
-                    "This method is not supported inside explicitly called transaction"
-                );
-            var xid = TransactionManager.Begin();
-
-            await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
-
-            lock (tableOperationsLock)
+            try
             {
-                _indexTables.Remove(targetColumn);
-            }
+                if (TransactionManager.GetCurrentTransaction() != null)
+                    throw new Exception(
+                        "This method is not supported inside explicitly called transaction"
+                    );
+                var xid = TransactionManager.Begin();
 
-            TransactionManager.Commit();
+                await LockManager.GetLock(LockManager.LockType.AccessExclusiveLock, this, xid);
+
+                lock (tableOperationsLock)
+                {
+                    _indexTables.Remove(targetColumn);
+                }
+
+                TransactionManager.Commit();
+            }
+            catch
+            {
+                TransactionManager.RollBack();
+                throw;
+            }
         }
 
         public void SetSearchManager(ISearchManager searchManager)
