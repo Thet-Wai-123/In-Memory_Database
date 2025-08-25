@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using In_Memory_Database.Classes.Data;
 using In_Memory_Database.Classes.Dependencies.Managers;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 //dotnet build
@@ -36,26 +37,27 @@ namespace In_Memory_Database_Benchmark
         }
 
         [GlobalSetup(Targets = [nameof(SearchStringWithoutIndex), nameof(SearchStringWithIndex)])]
-        public void SetupWithIndex()
+        public async void SetupWithIndex()
         {
             FillInTableWithRandomRows(tempTable);
-            tempTable.CreateIndex("Name");
+            await tempTable.CreateIndex("Name");
             rowToFind = tempTable.Rows[rnd.Next(1, rowCount)];
         }
 
         [Benchmark]
-        public void CreatingIndex()
+        public async void CreatingIndex()
         {
-            tempTable.CreateIndex("Age");
+            await tempTable.CreateIndex("Age");
         }
 
         [Benchmark]
         public List<DataRow> SearchStringWithoutIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            List<DataRow> Rows = tempTable.Rows.ToList();
             return searchManager.Search(
                 tempTable.ColumnNames,
-                tempTable.Rows,
+                Rows,
                 condition,
                 tempTable.IndexTables,
                 false
@@ -66,9 +68,10 @@ namespace In_Memory_Database_Benchmark
         public List<DataRow> SearchStringWithIndex()
         {
             var condition = new SearchConditions("Name", "==", rowToFind[0]);
+            List<DataRow> Rows = tempTable.Rows.ToList();
             return searchManager.Search(
                 tempTable.ColumnNames,
-                tempTable.Rows,
+                Rows,
                 condition,
                 tempTable.IndexTables,
                 true

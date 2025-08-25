@@ -2,11 +2,9 @@
 
 ## About
 
-This is a custom in-memory database built for learning purposes as part of a senior project, aiming to follow ACID architecture as closely as possible.
+This is a light-weight, in-memory database built as part of a research project at Cal Poly Pomona. It can especially be useful for testing purposes where you want isolated databases with ease of set up, and simulate real database functions.
 
-For use cases, it could be used for for simple and inspectable database system in small-scale projects or testing purposes.
-
-It supports additional features such as B-tree indexing and data persistence to disk. Future improvements include support for concurrency and atomic transactions.
+Basic functionalities include all CRUD operations and aims to follow ACID architecture as closely as possible, inspired by PostgreSQL's implementations. It supports concurrency using Multi-Version Control Concurrency and async read write locks to simulate Read Commited isolation level. It can also perform type-checks, and save to disk on crash by default, and create a B-tree indexing to speed up query search.
 
 ## Installation
 
@@ -32,11 +30,15 @@ Since the database class is public and available, you can directly create a data
 
 See [Reference Page](API.md) for documentation
 
-## Future Plans
+## Limitations & Potential Plans
 
-- Concurreny
-- Exception handling for when a transaction fails
-- More complex queries and reference keys
+- Atomicity is only supported for changing rows but not datatable structure.
+- Only includes simple add and retrieve, and no foreign keys or custom constraints.
+- Search parameters are simple and only allow one search condition.
+
+## Exception Handling
+
+Most of the exceptions are still recoverable, meaning when an exception is thrown, the current transaction will abort, reverting to its previous working state. However, exceptions relating to File or locks, specifically `LockNotReleasedException` which is a custom exception type, will have persisting impacts, so you should probably restart it.
 
 # Links
 
@@ -45,4 +47,6 @@ Git Repo = https://github.com/Thet-Wai-123/In-Memory_Database
 
 # Acknowledgments
 
-This project uses the BTree library by CodeExMachina, licensed under GPLv3.0.
+BTree library by CodeExMachina, licensed under GPLv3.0.
+
+AsyncReaderWriterLock by .NEXT, licensed under MIT.

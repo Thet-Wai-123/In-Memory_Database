@@ -1,5 +1,5 @@
-﻿using System.Collections.ObjectModel;
-using In_Memory_Database.Classes.Dependencies.Managers;
+﻿using In_Memory_Database.Classes.Dependencies.Managers;
+using System.Collections.ObjectModel;
 
 namespace In_Memory_Database.Classes.Data
 {
@@ -8,7 +8,10 @@ namespace In_Memory_Database.Classes.Data
         private Dictionary<string, DataTable> _tables = new();
         public ReadOnlyDictionary<string, DataTable> Tables
         {
-            get { return _tables.AsReadOnly(); }
+            get
+            {
+                return _tables.AsReadOnly();
+            }
         }
         private readonly ISearchManager _searchManager;
         private readonly IDiskManager _diskManager;
@@ -34,25 +37,10 @@ namespace In_Memory_Database.Classes.Data
             }
         }
 
-        public void CreateTable(
-            string tableName,
-            List<string> columnNames,
-            List<Type> columnTypes,
-            List<DataRow> rows = null
-        )
+        public void CreateTable(string tableName, List<string> columnNames, List<Type> columnTypes)
         {
-            _tables.Add(
-                tableName,
-                new DataTable(tableName, columnNames, columnTypes, _searchManager)
-            );
-
-            if (rows != null)
-            {
-                foreach (var row in rows)
-                {
-                    _tables[tableName].AddRow(row);
-                }
-            }
+            var generatedTable = new DataTable(tableName, columnNames, columnTypes, _searchManager);
+            _tables.Add(tableName, generatedTable);
         }
 
         public void CopyTables(Dictionary<string, DataTable> tables)
@@ -65,7 +53,7 @@ namespace In_Memory_Database.Classes.Data
         }
 
         public DataTable this[string tableName] =>
-            Tables.TryGetValue(tableName, out DataTable table)
+            Tables.TryGetValue(tableName, out DataTable? table)
                 ? table
                 : throw new KeyNotFoundException();
 
@@ -87,6 +75,21 @@ namespace In_Memory_Database.Classes.Data
         public void SetDiskLocation(string location)
         {
             _diskLocation = location;
+        }
+
+        public void Begin()
+        {
+            TransactionManager.Begin();
+        }
+
+        public void Commit()
+        {
+            TransactionManager.Commit();
+        }
+
+        public void Abort()
+        {
+            TransactionManager.RollBack();
         }
     }
 }

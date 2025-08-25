@@ -15,7 +15,7 @@ namespace In_Memory_Database_Testing
         }
 
         [Fact]
-        public void TableAddAndDelete_ExpectOneRowLeft()
+        public async void TableAddAndDelete_ExpectOneRowLeft()
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
@@ -25,12 +25,11 @@ namespace In_Memory_Database_Testing
             var row4 = new DataRow { 4 };
 
             //Act
-            table.AddRow(row1);
-            table.AddRow(row2);
-            table.AddRow(row3);
-            table.AddRow(row4);
-            var rowToRemove = new List<DataRow> { row2 };
-            table.RemoveRow(rowToRemove);
+            await table.AddRow(row1);
+            await table.AddRow(row2);
+            await table.AddRow(row3);
+            await table.AddRow(row4);
+            await table.RemoveRow(new SearchConditions("Age", "==", 2));
 
             //Assert
             Assert.Equal("1x3", table.Size);
@@ -39,7 +38,7 @@ namespace In_Memory_Database_Testing
         }
 
         [Fact]
-        public void TableSearchRow_ExpectCorrectRowReturned()
+        public async void TableSearchRow_ExpectCorrectRowReturned()
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
@@ -47,20 +46,47 @@ namespace In_Memory_Database_Testing
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };
             var row4 = new DataRow { 4 };
-            table.AddRow(row1);
-            table.AddRow(row2);
-            table.AddRow(row3);
-            table.AddRow(row4);
+            await table.AddRow(row1);
+            await table.AddRow(row2);
+            await table.AddRow(row3);
+            await table.AddRow(row4);
 
             //Act
-            var searchResult = table.Search(new SearchConditions("Age", "==", 2));
+            var searchResult = await table.Search(new SearchConditions("Age", "==", 2));
 
             //Assert
             Assert.Equal(new List<DataRow> { row2 }, searchResult);
         }
 
         [Fact]
-        public void TableAddAndRemoveColumn_ExpectTheRowsToMatch()
+        public async void TableUpdateRows_ExpectUpdatedChanges()
+        {
+            //Arrange
+            var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
+            var row1 = new DataRow { 1 };
+            var row2 = new DataRow { 2 };
+            var row3 = new DataRow { 3 };
+            await table.AddRow(row1);
+            await table.AddRow(row2);
+            await table.AddRow(row3);
+
+            //Act
+            await table.UpdateRow(new SearchConditions("Age", "==", 1), "Age", 4);
+            await table.UpdateRow(new SearchConditions("Age", "==", 2), "Age", 5);
+
+            //Assert
+            //Now the only values for age in tables should be 3,4,5 but they're not sorted in order
+            Assert.Equal(3, table.Height);
+
+            var expectedValues = new List<int> { 3, 4, 5 };
+            foreach (var row in table.Rows)
+            {
+                Assert.Contains(expectedValues, value => value == row[0]);
+            }
+        }
+
+        [Fact]
+        public async void TableAddAndRemoveColumn_ExpectTheRowsToMatch()
         {
             //Arrange
             var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
@@ -68,16 +94,42 @@ namespace In_Memory_Database_Testing
             var row2 = new DataRow { 2 };
             var row3 = new DataRow { 3 };
             var row4 = new DataRow { 4 };
-            table.AddRow(row1);
-            table.AddRow(row2);
-            table.AddRow(row3);
-            table.AddRow(row4);
+            await table.AddRow(row1);
+            await table.AddRow(row2);
+            await table.AddRow(row3);
+            await table.AddRow(row4);
 
             //Act & Assert
-            table.AddColumn("Score", typeof(int));
+            await table.AddColumn("Score", typeof(int));
             Assert.Equal(2, table.Width);
-            table.RemoveColumn("Age");
+            await table.RemoveColumn("Age");
             Assert.Equal(1, table.Width);
+        }
+
+        [Fact]
+        public async void VacuumTest_ExpectOldRowsToGetDeleted()
+        {
+            //Arrange
+            var table = new DataTable("AgeTable", ["Age"], [typeof(int)], new SearchManager());
+            var row1 = new DataRow { 1 };
+            await table.AddRow(row1);
+            await table.CreateIndex("Age");
+
+            //Act
+            await table.UpdateRow(new SearchConditions("Age", "==", 1), "Age", 2);
+            await table.UpdateRow(new SearchConditions("Age", "==", 2), "Age", 3);
+            var tableLengthBefore = table.getRowsLengthIncludeHidden();
+            var indexLengthBefore = table.getIndexTableLength("Age");
+
+            await table.VacuumInactiveRows();
+            var tableLengthAfter = table.getRowsLengthIncludeHidden();
+            var indexLengthAfter = table.getIndexTableLength("Age");
+
+            Assert.Equal(3, tableLengthBefore);
+            Assert.Equal(3, indexLengthBefore);
+            //Now the previous 2 versions has been dropped
+            Assert.Equal(1, tableLengthAfter);
+            Assert.Equal(1, indexLengthAfter);
         }
     }
 }
