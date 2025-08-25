@@ -476,7 +476,7 @@ namespace In_Memory_Database.Classes.Data
             try
             {
                 if (TransactionManager.GetCurrentTransaction() != null)
-                    throw new Exception(
+                    throw new InvalidOperationException(
                         "This method is not supported inside explicitly called transaction"
                     );
                 var xid = TransactionManager.Begin();

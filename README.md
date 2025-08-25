@@ -32,9 +32,13 @@ See [Reference Page](API.md) for documentation
 
 ## Limitations & Potential Plans
 
-- Atomicity is only supported for changing rows but not datatable structure, meaning those changes will not rollback properly.
+- Atomicity is only supported for changing rows but not datatable structure.
 - Only includes simple add and retrieve, and no foreign keys or custom constraints.
 - Search parameters are simple and only allow one search condition.
+
+## Exception Handling
+
+Most of the exceptions are still recoverable, meaning when an exception is thrown, the current transaction will abort, reverting to its previous working state. However, exceptions relating to File or locks, specifically `LockNotReleasedException` which is a custom exception type, will have persisting impacts, so you should probably restart it.
 
 # Links
 

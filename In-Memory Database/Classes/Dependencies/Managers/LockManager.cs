@@ -1,5 +1,6 @@
 ﻿using DotNext.Threading;
 using In_Memory_Database.Classes.Data;
+using In_Memory_Database.HelperClasses;
 using In_Memory_Database.Helpers;
 using System.Collections.Concurrent;
 
@@ -104,7 +105,7 @@ namespace In_Memory_Database.Classes.Dependencies.Managers
                     else
                     {
                         //There must be a lock in rwlocks because the outerloop is getting all affected datatables, meaning this has the lock otherwise a resource will be stuck.
-                        throw new Exception("A lock is not being properly released");
+                        throw new LockNotReleasedException("A lock is not being properly released");
                     }
                 }
             }
