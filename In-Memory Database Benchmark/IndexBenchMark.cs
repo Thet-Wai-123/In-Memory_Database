@@ -1,13 +1,13 @@
-﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Engines;
-using In_Memory_Database.Classes.Data;
-using In_Memory_Database.Classes.Dependencies.Managers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
+using In_Memory_Database.Classes.Data;
+using In_Memory_Database.Classes.Dependencies.Managers;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 //dotnet build
@@ -37,7 +37,7 @@ namespace In_Memory_Database_Benchmark
         }
 
         [GlobalSetup(Targets = [nameof(SearchStringWithoutIndex), nameof(SearchStringWithIndex)])]
-        public async void SetupWithIndex()
+        public async Task SetupWithIndex()
         {
             FillInTableWithRandomRows(tempTable);
             await tempTable.CreateIndex("Name");
@@ -45,7 +45,7 @@ namespace In_Memory_Database_Benchmark
         }
 
         [Benchmark]
-        public async void CreatingIndex()
+        public async Task CreatingIndex()
         {
             await tempTable.CreateIndex("Age");
         }
